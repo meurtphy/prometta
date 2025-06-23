@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit UX/UI/SEO – Brutux Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Audit UX / UI / SEO</h1>
+
+    <form id="audit-form">
+      <label for="url">URL à auditer</label>
+      <input id="url" name="url" type="url" placeholder="https://exemple.com" required />
+      <button type="submit" id="run-btn">Lancer l’audit</button>
+    </form>
+
+    <section id="log" aria-live="polite"></section>
+
+    <nav style="margin-top: 2em;">
+      <a href="result_view.html">🔍 Voir le crawl (result.json)</a><br />
+      <a href="report.html">📊 Voir le rapport final (audit_results.json)</a>
+    </nav>
+  </main>
+
+  <script>
+    const form = document.getElementById("audit-form");
+    const log  = document.getElementById("log");
+    const btn  = document.getElementById("run-btn");
+
+    const print = (msg) => {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      log.prepend(p);
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      log.innerHTML = "";
+      print("⏳ Audit en cours…");
+
+      try {
+        const res = await fetch("/run-audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: form.url.value.trim() })
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const data = await res.json();
+        print(`✅ Terminé ! Résultat : ${data.results}`);
+      } catch (err) {
+        print(`❌ ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

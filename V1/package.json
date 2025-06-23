@@ -1,22 +1,30 @@
 {
-  "name": "test1",
+  "name": "prometta",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "gpt_call.js",
+  "description": "Script d'appel à l'API OpenAI pour exécuter des audits automatisés à partir de prompts.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node gpt_call.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "openai",
+    "audit",
+    "gpt",
+    "nodejs",
+    "cli"
+  ],
+  "author": "Erwan Mpn",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "openai": "^5.1.0",
+    "playwright": "^1.52.0"
+  },
   "devDependencies": {
     "@types/node": "^22.15.29",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "dotenv": "^16.5.0",
-    "openai": "^5.1.0",
-    "playwright": "^1.52.0"
   }
 }

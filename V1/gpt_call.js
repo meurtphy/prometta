@@ -1,30 +1,21 @@
 #!/usr/bin/env node
-/**
- * gpt_call.js
- * ------------
- * Exécute une liste de prompts (prompts.json) contre l’API OpenAI,
- * journalise l’usage de tokens, calcule le coût et sauvegarde les réponses.
- *
- * ‼️  Nécessite :
- *      - Node ≥ 18
- *      - un fichier .env contenant OPENAI_API_KEY
- *
- * Options CLI (facultatives) :
- *   --model  gpt-4o | gpt-4-turbo | gpt-3.5-turbo      (défaut : gpt-4o)
- *   --temp   0-2                                       (défaut : 0.7)
- */
+/* ===========================================================================
+   gpt_call.js – génère (ou complète) audit_results.<site>.json
+   ---------------------------------------------------------------------------
+   Usage :
+     node gpt_call.js [--model=gpt-4o] [--temp=0.7] [--only=ID] [--force]
+   ======================================================================== */
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import fs               from 'node:fs/promises';
+import path             from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { performance } from 'node:perf_hooks';
+import { performance }   from 'node:perf_hooks';
+import dotenv            from 'dotenv';
+import { OpenAI }        from 'openai';
 
-import dotenv from 'dotenv';
-import { OpenAI } from 'openai';
-
-// ───────────────────────────── 1. ENV / CLI
 dotenv.config();
 
+/* ─── CLI ARGS ────────────────────────────────────────────────────────── */
 const argv = new Map(
   process.argv.slice(2).flatMap(str => {
     const [k, v = true] = str.startsWith('--') ? str.slice(2).split('=') : [];
@@ -32,113 +23,145 @@ const argv = new Map(
   })
 );
 
-const MODEL           = argv.get('model') ?? 'gpt-4o';       // ❇️ modèle par défaut
-const TEMPERATURE     = Number(argv.get('temp') ?? 0.7);
-const OPENAI_API_KEY  = process.env.OPENAI_API_KEY;
+const MODEL       = argv.get('model') ?? 'gpt-4o';
+const TEMPERATURE = Number(argv.get('temp') ?? 0.7);
+const ONLY_ID     = argv.get('only');
+const FORCE_MODE  = argv.has('force');
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
-  console.error('❌  Variable OPENAI_API_KEY manquante dans .env');
+  console.error('❌  OPENAI_API_KEY manquant dans .env');
   process.exit(1);
 }
 
+/* ─── CHEMINS ─────────────────────────────────────────────────────────── */
+const ROOT        = path.dirname(fileURLToPath(import.meta.url));
+const PROMPTS_FP  = path.join(ROOT, 'prompts.json');
+const CRAWL_FP    = path.join(ROOT, 'result.json');     // Sert à extraire l’URL
+const SCREENSHOT  = path.join(ROOT, 'screenshot.png');
+
+/* ─── Dérive un slug de domaine pour le fichier de sortie ─────────────── */
+let SITE_SLUG = 'site';
+try {
+  const { url = '' } = JSON.parse(await fs.readFile(CRAWL_FP, 'utf8'));
+  const h = new URL(url).hostname.replace(/^www\./, '');
+  SITE_SLUG = h.replace(/[^\w.-]/g, '') || 'site';
+} catch { /* ignore (crawl pas encore fait) */ }
+
+const RESULTS_FP = path.join(ROOT, `audit_results.${SITE_SLUG}.json`);
+const RESULTS_GENERIC_FP = path.join(ROOT, 'audit_results.json');
+
+/* ─── OPENAI & TARIFS ─────────────────────────────────────────────────── */
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
-// ───────────────────────────── 2. Constantes
-const ROOT          = path.dirname(fileURLToPath(import.meta.url));
-const PROMPTS_FILE  = path.join(ROOT, 'prompts.json');
-const RESULTS_FILE  = path.join(ROOT, 'audit_results.json');
-const MAX_RETRIES   = 2;
-const CONCURRENCY   = 2;      // ↗︎ paral­lélisme léger
 const PRICE = {
-  'gpt-3.5-turbo'       : { in: 0.0005, out: 0.0015 },
-  'gpt-3.5-turbo'  : { in: 0.01,   out: 0.03   },
-  'gpt-3.5-turbo': { in: 0.0005, out: 0.0015 }
+  'gpt-4o'               : { in: 0.0005, out: 0.0015 },
+  'gpt-4-turbo'          : { in: 0.0100, out: 0.0300 },
+  'gpt-3.5-turbo'        : { in: 0.0005, out: 0.0015 },
+  'gpt-4-vision-preview' : { in: 0.0100, out: 0.0300 }
 }[MODEL] ?? { in: 0.01, out: 0.03 };
 
-// ───────────────────────────── 3. Helpers
+const MAX_RETRIES = 2;
+const CONCURRENCY = 2;
+
+/* ─── HELPERS ─────────────────────────────────────────────────────────── */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function safeJSON(pathLike, fallback = []) {
-  try {
-    return JSON.parse(await fs.readFile(pathLike, 'utf8'));
-  } catch { return fallback; }
+async function safeJSON(fp, fallback = []) {
+  try { return JSON.parse(await fs.readFile(fp, 'utf8')); }
+  catch { return fallback; }
 }
 
-// ───────────────────────────── 4. Log bannière
-console.log(`▶️  Script : ${fileURLToPath(import.meta.url)}`);
-console.log(`▶️  Modèle  : ${MODEL}`);
-console.log(`▶️  Temp.   : ${TEMPERATURE}`);
-console.log('──────────────────────────────────────────');
+async function prepareVisionMessages(textPrompt) {
+  const buffer = await fs.readFile(SCREENSHOT);
+  const img64  = buffer.toString('base64');
+  return [{
+    role: 'user',
+    content: [
+      { type: 'image_url', image_url: { url: `data:image/png;base64,${img64}` } },
+      { type: 'text',      text: textPrompt }
+    ]
+  }];
+}
 
-// ───────────────────────────── 5. Fonction prompt → réponse
-async function runPrompt({ id, axis, content }) {
-  let attempt = 0;
-  let result, usage, duration;
+/* ─── RUN ONE PROMPT ──────────────────────────────────────────────────── */
+async function runPrompt({ id, axis, content, image = false }) {
+  let attempt = 0, usage, result, duration;
+
+  const messages = image && MODEL.includes('vision')
+    ? await prepareVisionMessages(content)
+    : [
+        { role: 'system', content: 'Tu es un assistant IA ultra-expert.' },
+        { role: 'user',   content }
+      ];
 
   while (attempt++ <= MAX_RETRIES) {
     const t0 = performance.now();
     try {
       const res = await openai.chat.completions.create({
-        model: MODEL,
-        temperature: TEMPERATURE,
-        max_tokens: 1_024,
-        messages: [
-          { role: 'system', content: 'Tu es un assistant IA ultra-expert.' },
-          { role: 'user',   content }
-        ]
+        model: MODEL, temperature: TEMPERATURE, max_tokens: 1024, messages
       });
-
       duration = performance.now() - t0;
       usage    = res.usage;
       result   = res.choices[0].message.content.trim();
-      break;                                                // ✅ succès
+      break;                          // ✅ success
     } catch (err) {
       console.warn(`⚠️  ${id} tentative ${attempt}/${MAX_RETRIES} – ${err.message}`);
-      if (attempt > MAX_RETRIES) throw new Error(`Échec définitif pour ${id}`);
-      await sleep(1_000 * attempt);                        // back-off expo
+      if (attempt > MAX_RETRIES) throw err;
+      await sleep(1_000 * attempt);
     }
   }
 
   const { prompt_tokens: inT, completion_tokens: outT, total_tokens: tot } = usage;
   const cost = (inT / 1_000) * PRICE.in + (outT / 1_000) * PRICE.out;
 
-  console.log(`✅  ${id.padEnd(12)} ${tot.toString().padStart(5)} tok  →  $${cost.toFixed(4)}`);
+  console.log(`✅  ${id.padEnd(12)} ${String(tot).padStart(5)} tok → $${cost.toFixed(4)}`);
 
   return {
     id, axis, prompt: content, response: result,
     usage: { in: inT, out: outT, total: tot },
-    cost: Number(cost.toFixed(6)),
-    ms: Math.round(duration),
-    ts: new Date().toISOString()
+    cost : Number(cost.toFixed(6)),
+    ms   : Math.round(duration),
+    ts   : new Date().toISOString()
   };
 }
 
-// ───────────────────────────── 6. Pipeline principal
+/* ─── MAIN PIPELINE ───────────────────────────────────────────────────── */
 (async () => {
-  const prompts      = await safeJSON(PROMPTS_FILE);
-  if (!prompts.length) throw new Error(`Fichier vide : ${PROMPTS_FILE}`);
+  const prompts = await safeJSON(PROMPTS_FP);
+  if (!prompts.length) throw new Error(`Fichier vide ou invalide : ${PROMPTS_FP}`);
 
-  const previous     = await safeJSON(RESULTS_FILE);
-  const doneIds      = new Set(previous.map(o => o.id));
-  const queue        = prompts.filter(p => !doneIds.has(p.id));
+  const previous = FORCE_MODE ? [] : await safeJSON(RESULTS_FP);
+  const doneIds  = new Set(previous.map(r => r.id));
 
+  const queue = prompts.filter(p =>
+    (!ONLY_ID || p.id === ONLY_ID) &&
+    (FORCE_MODE || !doneIds.has(p.id))
+  );
+
+  console.log(`▶️  Site     : ${SITE_SLUG}`);
+  console.log(`▶️  Modèle   : ${MODEL}`);
+  console.log(`▶️  Temp.    : ${TEMPERATURE}`);
+  console.log(`▶️  Force    : ${FORCE_MODE}`);
+  console.log('──────────────────────────────────────────');
   console.log(`ℹ️  À traiter : ${queue.length}/${prompts.length}`);
 
-  let totalTokens = 0, totalCost = 0;
-  const results = [...previous];
+  let totTok = 0, totCost = 0;
+  const results = FORCE_MODE ? [] : [...previous];
 
   for (let i = 0; i < queue.length; i += CONCURRENCY) {
     const batch = queue.slice(i, i + CONCURRENCY);
     const out   = await Promise.all(batch.map(runPrompt));
-    out.forEach(o => { totalTokens += o.usage.total; totalCost += o.cost; });
+    out.forEach(o => { totTok += o.usage.total; totCost += o.cost; });
     results.push(...out);
-    await fs.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2), 'utf8');
+    await fs.writeFile(RESULTS_FP,        JSON.stringify(results, null, 2));
+    await fs.writeFile(RESULTS_GENERIC_FP, JSON.stringify(results, null, 2)); // miroir
   }
 
   console.log('──────────────────────────────────────────');
-  console.log(`🎉  Terminé.  Tokens totaux : ${totalTokens}`);
-  console.log(`💰  Coût estimé        : $${totalCost.toFixed(4)}`);
-})().catch(err => {
-  console.error('💥  FATAL :', err);
+  console.log(`🎉  Terminé.  Tokens totaux : ${totTok}`);
+  console.log(`💰  Coût estimé            : $${totCost.toFixed(4)}`);
+})().catch(e => {
+  console.error('💥  FATAL :', e.message || e);
   process.exit(1);
 });

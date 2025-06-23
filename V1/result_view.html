@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Aperçu du crawl – result.json</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    pre {
+      background: #111;
+      color: #0f0;
+      padding: 1em;
+      overflow: auto;
+      max-height: 80vh;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>📂 Aperçu – result.json</h1>
+    <pre id="json"></pre>
+    <a href="index.html">← Retour</a>
+  </main>
+
+  <script>
+    fetch('result.json')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("json").textContent = JSON.stringify(data, null, 2);
+      })
+      .catch(err => {
+        document.getElementById("json").textContent = `Erreur : ${err.message}`;
+      });
+  </script>
+</body>
+</html>

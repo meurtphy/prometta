@@ -1,21 +1,24 @@
-// crawl_site.js (ESM)
+#!/usr/bin/env node
+// crawl_site.js (ESM) – Audit DOM basique avec screenshot + extraction
+
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 
+// ─── Paramètres ─────────────────────────────────────
 const url = process.argv[2];
-if (!url) {
+if (!url || !/^https?:\/\//.test(url)) {
   console.error('❌  Utilisation : node crawl_site.js <URL>');
   process.exit(1);
 }
 
-// 1. Configuration centralisée
-const TIMEOUT    = 90_000;      // 90 s max par page
-const MAX_TEXTS  = 20;          // textes à extraire
-const SCREENSHOT = 'screenshot.png';
-const RESULT     = 'result.json';
+// ─── Constantes globales ────────────────────────────
+const TIMEOUT    = 90_000;            // Timeout global
+const MAX_TEXTS  = 20;                // Nombre de textes max à extraire
+const SCREENSHOT = 'screenshot.png';  // Nom du screenshot
+const RESULT     = 'result.json';     // Fichier de sortie JSON
 
+// ─── Main ───────────────────────────────────────────
 (async () => {
-  // 2. Lancement du navigateur (–--single-process = + léger)
   const browser = await chromium.launch({
     headless: true,
     args: ['--single-process']
@@ -31,64 +34,78 @@ const RESULT     = 'result.json';
   const page = await context.newPage();
 
   try {
-    // 3. Navigation (DOM loaded → on force un scroll complet)
+    // ── Étape 1 : Navigation et scroll
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT }).catch(() => {});
     await autoScroll(page);
 
-    // 4. Extraction structure + textes
-    const { structure, texts, title } = await page.evaluate(
-      ({ maxTexts }) => {
-        const pick = (sel, mapper) =>
-          Array.from(document.querySelectorAll(sel))
-            .map(mapper)
-            .filter(Boolean);
+    // ── Étape 2 : Extraction DOM
+    const { structure, texts, title } = await page.evaluate(({ maxTexts }) => {
+      const clean = str =>
+        str.replace(/\s+/g, ' ').trim().replace(/[\n\r\t]+/g, '');
 
-        const structure = pick('header,nav,main,footer,section', el =>
-          el.tagName.toLowerCase()
-        );
+      const pick = (selector) =>
+        Array.from(document.querySelectorAll(selector))
+          .map(el => clean(el.textContent || ''))
+          .filter(txt => txt.length >= 8 && txt.length <= 140); // Exclure trop courts/vides
 
-        const texts = pick('h1,h2,h3,button,a', el =>
-          el.textContent.trim()
-        ).slice(0, maxTexts);
+      const structure = Array.from(
+        new Set(
+          Array.from(document.querySelectorAll('header,nav,main,footer,section'))
+            .map(el => el.tagName.toLowerCase())
+        )
+      );
 
-        return { structure, texts, title: document.title };
-      },
-      { maxTexts: MAX_TEXTS }
-    );
+      const texts = pick('h1,h2,h3,button,a').slice(0, maxTexts);
 
-    // 5. Screenshot
+      return {
+        title: document.title || '',
+        structure,
+        texts
+      };
+    }, { maxTexts: MAX_TEXTS });
+
+    // ── Étape 3 : Screenshot
     await page.screenshot({ path: SCREENSHOT, fullPage: true });
     console.log(`✅  Screenshot : ${SCREENSHOT}`);
 
-    // 6. Sauvegarde JSON
-    const result = { url, title, structure, texts, timestamp: new Date().toISOString() };
-    await fs.writeFile(RESULT, JSON.stringify(result, null, 2));
+    // ── Étape 4 : Enregistrement du JSON
+    const output = {
+      url,
+      title,
+      structure,
+      texts,
+      timestamp: new Date().toISOString()
+    };
+
+    await fs.writeFile(RESULT, JSON.stringify(output, null, 2), 'utf8');
     console.log(`✅  Résultat : ${RESULT}`);
   } catch (err) {
     console.error('❌  Échec du crawl :', err.message || err);
+    process.exit(1);
   } finally {
     await browser.close();
   }
 })();
 
-/* -------------------------------------------------------------- */
-/* Helpers                                                        */
-/* -------------------------------------------------------------- */
+// ─── Scrolling dynamique de la page ─────────────────
 async function autoScroll(page) {
   await page.evaluate(async () => {
     await new Promise(resolve => {
       let totalHeight = 0;
-      const distance = 800;
+      const distance = 600;
+      const delay = 100;
+
       const timer = setInterval(() => {
         const { scrollHeight } = document.body;
         window.scrollBy(0, distance);
         totalHeight += distance;
+
         if (totalHeight >= scrollHeight - window.innerHeight) {
           clearInterval(timer);
           resolve();
         }
-      }, 150);
+      }, delay);
     });
   });
 }

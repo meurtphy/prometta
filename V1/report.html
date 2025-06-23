@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Rapport final – audit_results.json</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .report { margin-bottom: 2em; }
+    .report h2 { margin: 0.5em 0 0.2em; color: #005; }
+    .report pre {
+      background: #f4f4f4;
+      padding: 1em;
+      white-space: pre-wrap;
+      border-left: 4px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>📊 Rapport d’audit</h1>
+    <div id="reports"></div>
+    <a href="index.html">← Retour</a>
+  </main>
+
+  <script>
+    fetch('audit_results.json')
+      .then(res => res.json())
+      .then(results => {
+        const container = document.getElementById("reports");
+
+        results.forEach(({ id, axis, response }) => {
+          const div = document.createElement("div");
+          div.className = "report";
+
+          div.innerHTML = `
+            <h2>${id} – ${axis}</h2>
+            <pre>${response}</pre>
+          `;
+
+          container.appendChild(div);
+        });
+      })
+      .catch(err => {
+        document.getElementById("reports").innerHTML = `<p>❌ ${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>
