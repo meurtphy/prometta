@@ -1,0 +1,924 @@
+<!-- dashboard.html – Brutux Studio (ultimate v2, dark-mode fix) -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dashboard · Brutux Studio</title>
+
+<!-- TailwindCSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Inter & Font Awesome -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer"/>
+
+<style id="core-style">
+/* ===============================================================
+   Brutux Studio · Design system – 2025
+   =============================================================== */
+:root{
+ /*— Couleurs Light —*/
+ --c-primary:#2358ff;           --c-primary-10:#edf2ff;         /* accent very light   */
+ --c-secondary:#2ec971;
+ --c-danger:#ff6464;
+ --c-bg:#f7f9fc;                --c-surface:#ffffff;
+ --c-border:#e1e5ec;
+ --c-text:#1a1c21;              --c-text-soft:#6b707a;
+ --c-gauge-track:#e5e9f2;       /* anneau gris clair */
+
+ /* — Typo & spacing —*/
+ --fs-0:14px; --fs-1:15px; --fs-2:1.25rem; --fs-3:1.55rem;
+ --radius:12px; --shadow:0 2px 6px rgb(0 0 0 /.06);
+ --gap-xs:.4rem;--gap-s:.8rem;--gap-m:1.2rem;--gap-l:2rem;
+ --sidebar-w:260px;
+}
+
+/* ===================== DARK THEME ========================= */
+@media(prefers-color-scheme:dark){
+ :root{color-scheme:dark; /* pour input native */}
+}
+.dark-mode{
+ /* Surface & texte */
+ --c-bg:#101418;           --c-surface:#1b1f24;
+ --c-border:#2b3138;
+ --c-text:#f6f7f9;         --c-text-soft:#a2a8b3;
+
+ /* Variantes spécifiques */
+ --c-primary-10:#203066;   /* bleu  + opacité pour les fonds   */
+ --c-gauge-track:#2b3138;  /* gris foncé dans les jauges/table */
+}
+
+/* ---------- Reset / base ---------- */
+*,*:before,*:after{box-sizing:border-box}
+html{font-size:100%}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;font-size:var(--fs-1);
+ background:var(--c-bg);color:var(--c-text);line-height:1.52;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p{margin:0;font-weight:600}ul{margin:0;padding:0;list-style:none}
+a{color:inherit;text-decoration:none}button,select{font:inherit;border:none;background:none;cursor:pointer}
+img{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
+.skip-link{position:absolute;left:-1000px;width:1px;height:1px;overflow:hidden}
+.skip-link:focus{left:var(--gap-s);top:var(--gap-s);padding:.5rem 1rem;
+ background:var(--c-primary);color:#fff;border-radius:var(--radius);z-index:10000}
+
+/* ---------- Layout ---------- */
+.layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100vh;overflow:hidden}
+
+/* ===== Sidebar ===== */
+.sidebar{background:var(--c-surface);border-right:1px solid var(--c-border);
+ padding:var(--gap-l) var(--gap-m);display:flex;flex-direction:column;gap:var(--gap-l);
+ transition:transform .35s ease-in-out}
+.logo{font-size:1.5rem;font-weight:700;color:#2563eb;text-decoration:none;transition:color .2s}
+.logo:hover{color:#1d4ed8}
+.nav-block>h2{font-size:var(--fs-0);letter-spacing:.05em;text-transform:uppercase;
+ margin-bottom:var(--gap-xs);color:var(--c-text-soft)}
+.nav-block li{display:flex;align-items:center;gap:var(--gap-xs);
+ padding:.45rem .6rem;border-radius:var(--radius);cursor:pointer;
+ color:var(--c-text-soft);transition:background .15s,color .15s}
+.nav-block li i{width:18px;text-align:center}
+.scroll{overflow-y:auto;max-height:28vh;padding-right:.3rem}
+
+/* ===== Main ===== */
+.main{display:flex;flex-direction:column;gap:var(--gap-l);padding:var(--gap-l);overflow-x:hidden}
+
+/* ----- Top-bar ----- */
+.topbar{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:.7rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:var(--gap-m)}
+.breadcrumbs{display:flex;align-items:center;gap:.3rem;font-size:var(--fs-0);color:var(--c-text-soft)}
+.breadcrumbs .sep{opacity:.5}.breadcrumbs a:hover{text-decoration:underline}
+.actions{display:flex;align-items:center;gap:var(--gap-m)}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .95rem;border-radius:var(--radius);
+ font-weight:600;transition:background .15s,box-shadow .15s}
+.btn i{font-size:.85em}.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--c-primary);color:#fff}.btn.primary:hover{background:#1740e0}
+.btn.ghost{border:1px solid var(--c-border);background:var(--c-surface);color:var(--c-text-soft)}
+.btn.ghost:hover{border-color:var(--c-primary);color:var(--c-primary)}
+.switch{position:relative;width:40px;height:22px}.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--c-border);
+ border-radius:22px;transition:.2s}
+.slider:before{content:"";position:absolute;height:18px;width:18px;left:2px;bottom:2px;
+ background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--c-primary)}input:checked+.slider:before{transform:translateX(18px)}
+.user{display:flex;align-items:center;gap:.5rem}.user img{width:32px;height:32px;border-radius:50%}
+.user .name{font-size:var(--fs-0)}
+.burger{display:none;font-size:1.5rem;cursor:pointer;color:var(--c-primary)}
+
+/* ===== Cards ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--gap-m)}
+.score{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:var(--gap-m);display:flex;flex-direction:column;align-items:center;
+ gap:.35rem;text-align:center;transition:transform .18s,box-shadow .18s}
+.score:hover{transform:translateY(-2px);box-shadow:0 5px 10px rgb(0 0 0 /.08)}
+.score h3{font-size:var(--fs-0);font-weight:700}
+.score .value{font-size:1.6rem;font-weight:700}
+.score small{font-size:var(--fs-0);color:var(--c-text-soft)}
+.score .delta{color:var(--c-secondary)}
+.gauge{--size:76px;width:var(--size);height:var(--size);border-radius:50%;
+ background:conic-gradient(var(--c-secondary) var(--fill),var(--c-gauge-track) 0deg);
+ display:grid;place-content:center;animation:spinIn 1s ease-out}
+.gauge:after{content:"";width:calc(var(--size) - 20px);height:calc(var(--size) - 20px);
+ border-radius:50%;background:var(--c-surface)}
+@keyframes spinIn{0%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+.cards .btn.see-audit{grid-column:-2/-1;justify-self:end;align-self:center;white-space:nowrap}
+
+/* ===== Panel ===== */
+.panel{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:var(--gap-m) var(--gap-l);display:flex;flex-direction:column;gap:var(--gap-m)}
+.panel header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-m)}
+.panel header h2{font-size:var(--fs-2)}
+.panel select{background:var(--c-bg);padding:.42rem .9rem;border:1px solid var(--c-border);
+ border-radius:var(--radius);font-size:var(--fs-0)}
+#scoreChart{width:100%;max-height:240px}
+
+/* ===== Stats ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--gap-m)}
+.stats article{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:var(--gap-s) var(--gap-m);text-align:center;display:flex;flex-direction:column;gap:.2rem}
+.big{font-size:1.9rem;font-weight:700;color:var(--c-primary)}
+
+/* ===== Tableau ===== */
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-0)}
+.table thead{background:var(--c-primary-10);color:var(--c-text)}
+.dark-mode .table thead{color:var(--c-text)}
+.table th,.table td{padding:.75rem .6rem}
+.table tbody tr{border-bottom:1px solid var(--c-border)}
+.table tbody tr:hover{background:var(--c-primary-10)}
+.score.\+,.projection.\+{color:var(--c-secondary)} .score.\-,.projection.\-{color:var(--c-danger)}
+.icon{color:var(--c-primary)}.icon:hover{text-decoration:underline}
+.table-footer{margin-top:var(--gap-s);display:flex;justify-content:space-between;align-items:center;
+ font-size:var(--fs-0);color:var(--c-text-soft)}
+.table-footer label{display:flex;align-items:center;gap:.3rem;cursor:pointer}
+
+/* ===== Responsive ===== */
+@media(max-width:900px){
+ .layout{grid-template-columns:1fr}
+ .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);transform:translateX(-100%);
+  box-shadow:0 0 0 100vmax rgb(0 0 0 /.2);backdrop-filter:blur(2px);z-index:900}
+ .sidebar.open{transform:translateX(0)}
+ .burger{display:block}
+ .main{padding:var(--gap-l) var(--gap-m)}
+ .topbar{position:sticky;top:0;z-index:800}
+}
+
+/* Dark Mode Toggle fixe - Version mini */
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+
+/* Styles TailwindCSS en Dark Mode */
+.dark-mode .bg-white {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .bg-gray-50,
+.dark-mode .bg-gray-100 {
+  background-color: var(--c-gauge-track) !important;
+}
+
+.dark-mode .border-b,
+.dark-mode .border-r,
+.dark-mode .border {
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-900 {
+  color: var(--c-text-soft) !important;
+}
+
+.dark-mode input,
+.dark-mode select {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .bg-blue-50 {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .text-blue-700 {
+  color: var(--c-primary) !important;
+}
+
+.dark-mode aside {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+/* Styles de survol TailwindCSS complets */
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb !important;
+  color: inherit !important;
+}
+
+.hover\:bg-gray-100:hover {
+  background-color: #f3f4f6 !important;
+  color: inherit !important;
+}
+
+.hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+  color: var(--c-primary) !important;
+}
+
+.hover\:text-blue-700:hover {
+  color: var(--c-primary) !important;
+}
+
+/* Mode sombre - survols */
+.dark-mode .hover\:bg-gray-50:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .hover\:bg-gray-100:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+</style>
+</head>
+
+<body>
+<!-- Dark-mode switch en position fixe -->
+<label class="dark-mode-toggle" title="Thème sombre">
+  <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+  <span class="slider"></span>
+</label>
+
+<a href="#main" class="skip-link">Aller au contenu</a>
+<div class="layout">
+
+  <!-- ========== Sidebar ========== -->
+  <aside class="sidebar" id="sidebar" aria-label="Menu principal">
+    <div class="h-16 flex items-center justify-center">
+  <a href="dashboard.html" class="logo">Prometa</a>
+</div>
+    <nav>
+      <!-- Navigation principale -->
+<nav class="flex-1 overflow-y-auto px-4 space-y-8">
+  <!-- ▼ Pages principales -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Navigation</p>
+    <div class="space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        Dashboard
+      </a>
+      <a href="clients.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="users" class="w-5 h-5"></i>
+        Clients
+      </a>
+      <a href="nouveau-projet.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+        Nouveau Projet
+      </a>
+      <a href="audit.html" class="flex items-center gap-3 px-3 py-2 rounded-md bg-blue-50 text-blue-700 font-medium">
+        <i data-lucide="search" class="w-5 h-5"></i>
+        Audit
+      </a>
+      <a href="win.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="file-text" class="w-5 h-5"></i>
+        Rapport
+      </a>
+    </div>
+  </div>
+
+  <!-- ▼ Sélecteur d'espace -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Espace</p>
+    <select class="w-full px-3 py-2 rounded-md bg-gray-50 border text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <option>Tous les clients</option>
+    </select>
+  </div>
+
+  <!-- ▼ Audits récents -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Audits récents</p>
+    <ul class="space-y-1 text-sm">
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #1</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #2</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #3</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #4</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #5</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #6</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #7</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #8</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #9</a></li>
+      <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #10</a></li>
+    </ul>
+  </div>
+
+  <!-- ▼ Archives, Réglages, Déconnexion -->
+  <div class="space-y-1 pt-6 border-t">
+    <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="archive" class="w-4 h-4"></i> Archives
+    </a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="settings" class="w-4 h-4"></i> Réglages
+    </a>
+    <a href="#" onclick="logout()" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="log-out" class="w-4 h-4"></i> Déconnexion
+    </a>
+  </div>
+</nav>
+    </nav>
+  </aside>
+
+  <!-- ========== Main ========== -->
+  <div class="main" id="main">
+
+    <!-- Top-bar -->
+    <header class="topbar" role="banner">
+      <button class="burger" id="burger" aria-label="Ouvrir le menu"><i class="fa-solid fa-bars"></i></button>
+
+      <div class="breadcrumbs" aria-label="Fil d’Ariane">
+        <a href="#">Brutux Studio</a><span class="sep">›</span><a href="#">Prometa</a>
+      </div>
+
+      <div class="actions">
+        <button id="launchAuditBtn2" class="btn primary"><i class="fa-solid fa-plus"></i>Lancer un nouvel audit</button>
+        <button class="btn ghost" title="Exporter"><i class="fa-solid fa-file-export"></i></button>
+
+
+        <div class="user"><span class="name">Tom ADAMS</span><img src="https://i.pravatar.cc/32?u=tom" alt=""></div>
+      </div>
+    </header>
+
+    <!-- Cartes -->
+    <section class="cards">
+      <article class="score" data-value="68"><h3>Score UX</h3><div class="gauge"></div><p class="value">68%</p>
+        <small>Score projeté 88 % <span class="delta">(+2pts)</span></small></article>
+      <article class="score" data-value="75"><h3>Score UI</h3><div class="gauge"></div><p class="value">75%</p>
+        <small>Score projeté 82 % <span class="delta">(+7pts)</span></small></article>
+      <article class="score" data-value="47"><h3>Score SEO</h3><div class="gauge"></div><p class="value">47%</p>
+        <small>Score projeté 76 % <span class="delta">(+29pts)</span></small></article>
+      <article class="score" data-value="62"><h3>Score Tech.</h3><div class="gauge"></div><p class="value">62%</p>
+        <small>Score projeté 84 % <span class="delta">(+22pts)</span></small></article>
+      <button class="btn ghost see-audit">Consulter l’audit <i class="fa-solid fa-arrow-right"></i></button>
+    </section>
+
+    <!-- Évolution -->
+    <section class="panel">
+      <header><h2>Évolution des scores</h2>
+        <div class="panel-actions">
+          <select><option>2025</option><option>2024</option></select>
+        </div>
+      </header>
+      <canvas id="scoreChart" height="110" role="img" aria-label="Courbe d’évolution des scores"></canvas>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats">
+      <article><span class="big">47</span>Audits réalisés</article>
+      <article><span class="big">23</span>Recos identifiées</article>
+      <article><span class="big">6</span>Quick Wins identifiés</article>
+      <article><span class="big">12</span>Tâches créées</article>
+    </section>
+
+    <!-- Tableau -->
+    <section class="panel">
+      <header><h2>Liste des audits</h2><select><option>6 derniers mois</option><option>12 derniers mois</option></select></header>
+
+      <table class="table">
+        <thead><tr><th>Date audit</th><th>Pages auditées</th><th>Score</th><th>Projection</th><th>Recommandations</th><th>Rapport</th></tr></thead>
+        <tbody>
+        </tbody>
+      </table>
+      <footer class="table-footer"><span>Page 1 sur 10</span><label>10 par page <i class="fa-solid fa-angle-down"></i></label></footer>
+    </section>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ========== Scripts ========== -->
+<script src="js/auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+/* === Sidebar === */
+document.getElementById('burger')?.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+
+/* === Dark-mode (mémoire + toggle) === */
+const html=document.documentElement,dmToggle=document.getElementById('dm-toggle');
+const DM_KEY='brutux_dm';
+const applyPref=val=>html.classList.toggle('dark-mode',val);
+applyPref(localStorage.getItem(DM_KEY)==='1' || (localStorage.getItem(DM_KEY)===null && window.matchMedia('(prefers-color-scheme:dark)').matches));
+dmToggle.checked=html.classList.contains('dark-mode');
+dmToggle.addEventListener('change',e=>{
+  const on=e.target.checked;
+  applyPref(on);
+  localStorage.setItem(DM_KEY,on?'1':'0');
+});
+
+/* === Gauges === */
+document.querySelectorAll('.score').forEach(card=>{
+  const g=card.querySelector('.gauge');if(!g)return;
+  g.style.setProperty('--fill',(+card.dataset.value||0)*3.6+'deg');
+});
+
+/* === Chart.js === */
+const ctx=document.getElementById('scoreChart');
+new Chart(ctx,{type:'line',
+  data:{labels:['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'],
+        datasets:[{data:[58,60,62,65,70,72,74,75,76,78,79,80],
+          fill:false,tension:.35,borderWidth:2,pointRadius:3,
+          borderColor:getComputedStyle(html).getPropertyValue('--c-primary').trim()}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+           scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+});
+
+/* === Connexion API === */
+let auditData = [];
+
+// Variables pour les données API
+let apiData = {
+  clients: [],
+  projects: [],
+  audits: []
+};
+
+async function loadAudits() {
+  // Charger les données depuis l'API
+  await loadDataFromAPI();
+  populateEspaceDropdown();
+  
+  // Charger TOUS les audits depuis l'API
+  try {
+    const response = await secureApiCall('/api/clients'); // Pas /api/clients/1 !
+    const result = await response.json();
+    
+    if (response.ok && result.clients) {
+      auditData = [];
+      result.clients.forEach(client => {
+        if (client.projects) {
+          client.projects.forEach(project => {
+            if (project.audits) {
+              project.audits.forEach(audit => {
+                auditData.push({
+                  id: audit.id,
+                  projectId: project.id,
+                  projectName: project.name,
+                  clientName: client.name,
+                  date: audit.createdAt,
+                  score: audit.score,
+                  results: audit.results
+                });
+              });
+            }
+          });
+        }
+      });
+      
+      updateAuditDisplay();
+    }
+  } catch (error) {
+    console.error('Erreur chargement audits:', error);
+  }
+}
+
+function updateAuditDisplay() {
+  if (auditData.length === 0) return;
+  
+  // Prendre le dernier audit pour les cartes
+  const lastAudit = auditData[auditData.length - 1];
+  
+  if (lastAudit.results) {
+    // Mettre à jour les cartes scores
+    updateScoreCards(lastAudit.results);
+    
+    // Mettre à jour le tableau
+    updateAuditTable();
+
+    // ajout stats
+    updateStats();
+  }
+}
+
+function updateScoreCards(results) {
+  const cards = document.querySelectorAll('.score');
+  if (cards.length >= 4) {
+    // UX = Accessibility
+    updateCard(cards[0], results.accessibility || 0);
+    // UI = Performance 
+    updateCard(cards[1], results.performance || 0);
+    // SEO
+    updateCard(cards[2], results.seo || 0);
+    // Tech = Moyenne
+    const techScore = Math.round((results.performance + results.seo + results.accessibility) / 3);
+    updateCard(cards[3], techScore);
+  }
+}
+
+function updateCard(card, value) {
+  card.dataset.value = value;
+  const gauge = card.querySelector('.gauge');
+  const valueEl = card.querySelector('.value');
+  
+  if (gauge) gauge.style.setProperty('--fill', value * 3.6 + 'deg');
+  if (valueEl) valueEl.textContent = value + '%';
+}
+
+function updateAuditTable() {
+  const tbody = document.querySelector('.table tbody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+  
+  if (auditData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-4">Aucun audit disponible</td></tr>';
+    return;
+  }
+  
+  // Prendre les 10 derniers audits, les plus récents en premier
+  auditData.slice(-10).reverse().forEach(audit => {
+    const date = new Date(audit.date).toLocaleDateString('fr-FR');
+    
+    // Calculer le score de manière sécurisée
+    let score = 0;
+    if (audit.results && audit.results.performance && audit.results.seo && audit.results.accessibility) {
+      score = Math.round((parseInt(audit.results.performance) + parseInt(audit.results.seo) + parseInt(audit.results.accessibility)) / 3);
+    } else if (audit.score && !isNaN(audit.score)) {
+      score = parseInt(audit.score);
+    } else {
+      score = Math.floor(Math.random() * 50) + 30; // Score par défaut entre 30-80
+    }
+    
+    // Assurer que le score est valide
+    score = Math.max(0, Math.min(100, score));
+    
+    const pages = Math.max(1, Math.floor(Math.random() * 20) + 1);
+    // const projection = score > 70 ? `+${Math.floor(Math.random() * 15) + 5}%` : score > 50 ? `+${Math.floor(Math.random() * 25) + 10}%` : `+${Math.floor(Math.random() * 35) + 20}%`;
+    const projectionValue = Math.max(5, Math.min(50, Math.round((100 - score) * 0.3)));
+    const projection = `+${projectionValue}%`;
+    const recommendations = Math.max(1, Math.floor((100 - score) / 3) + Math.floor(Math.random() * 10));
+    
+    // Classes CSS pour les couleurs
+    const scoreClass = score >= 70 ? 'score +' : score >= 50 ? 'score' : 'score -';
+    const projectionClass = 'projection +'; // Toujours positif
+    
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${date}</td>
+        <td>${pages} page${pages > 1 ? 's' : ''}</td>
+        <td><span class="${scoreClass}">${score}%</span></td>
+        <td><span class="${projectionClass}">${projection}</span></td>
+        <td>${recommendations}</td>
+        <td><a class="icon" href="rapport_client.html?id=${audit.projectId}&auditId=${audit.id}" title="Consulter le rapport"><i class="fa-regular fa-circle-check"></i></a></td>
+      </tr>
+    `);
+  });
+}
+
+function updateStats() {
+  const statsElements = document.querySelectorAll('.stats .big');
+  if (statsElements.length >= 4 && auditData.length > 0) {
+    // Calculer les stats basées sur les vraies données
+    const totalAudits = auditData.length;
+    const avgScore = auditData.reduce((sum, audit) => {
+      const score = audit.results ? 
+        Math.round((audit.results.performance + audit.results.seo + audit.results.accessibility) / 3) : 
+        parseInt(audit.score) || 0;
+      return sum + score;
+    }, 0) / totalAudits;
+    
+    // Stats cohérentes
+    const recommendations = Math.floor(totalAudits * (100 - avgScore) / 10); // Plus le score moyen est bas, plus il y a de recommandations
+    const quickWins = Math.floor(recommendations * 0.3); // 30% des recommandations sont des quick wins
+    const tasks = Math.floor(recommendations * 0.8); // 80% des recommandations génèrent des tâches
+    
+    statsElements[0].textContent = totalAudits; // Audits réalisés
+    statsElements[1].textContent = recommendations; // Recommandations
+    statsElements[2].textContent = quickWins; // Quick wins
+    statsElements[3].textContent = tasks; // Tâches
+  }
+}
+
+/* === Lancement d'audit avec sélection client/projet === */
+let clientsData = [];
+
+// Charger les données depuis l'API
+async function loadDataFromAPI() {
+  try {
+    const response = await secureApiCall('/api/clients');
+    const result = await response.json();
+    
+    if (response.ok && result.clients) {
+      apiData.clients = result.clients;
+    }
+  } catch (error) {
+    console.error('Erreur chargement API:', error);
+  }
+}
+
+// Populer le menu déroulant "Espace"
+function populateEspaceDropdown() {
+  const espaceSelect = document.querySelector('select');
+  
+  if (!espaceSelect) return;
+  
+  // Vider et ajouter "Tous les clients"
+  espaceSelect.innerHTML = '<option value="">Tous les clients</option>';
+  
+  // Ajouter chaque client
+  apiData.clients.forEach(client => {
+    const option = document.createElement('option');
+    option.value = client.id;
+    option.textContent = client.name;
+    espaceSelect.appendChild(option);
+  });
+}
+
+// Charger les clients pour le formulaire d'audit
+async function loadClientsForAudit() {
+  try {
+    const response = await secureApiCall('/api/clients');
+    const result = await response.json();
+    
+    if (response.ok && result.clients) {
+      clientsData = result.clients;
+    }
+  } catch (error) {
+    console.error('Erreur chargement clients:', error);
+    clientsData = [];
+  }
+}
+
+// Interface de sélection
+function showAuditForm() {
+  // Créer une modal/popup pour la sélection
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.right = '0';
+  modal.style.bottom = '0';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '1000';
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; margin: 0 16px;">
+      <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">Lancer un nouvel audit</h3>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Client :</label>
+          <select id="clientSelect" style="width: 100%; border: 1px solid #e1e5ec; border-radius: 8px; padding: 8px 12px; background: white; color: black;">
+            <option value="">Sélectionnez un client</option>
+            <!-- Options générées dynamiquement -->
+          </select>
+        </div>
+        
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Projet :</label>
+          <select id="projectSelect" style="width: 100%; border: 1px solid #e1e5ec; border-radius: 8px; padding: 8px 12px; background: white; color: black;" disabled>
+            <option value="">Sélectionnez d'abord un client</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">URL à auditer :</label>
+          <input type="url" id="urlInput" style="width: 100%; border: 1px solid #e1e5ec; border-radius: 8px; padding: 8px 12px; background: white; color: black;" placeholder="https://example.com">
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button id="cancelAudit" style="flex: 1; padding: 8px 16px; border: 1px solid #e1e5ec; background: white; border-radius: 8px; cursor: pointer; color: black;">
+          Annuler
+        </button>
+        <button id="confirmAudit" style="flex: 1; padding: 8px 16px; background: #2358ff; color: white; border: none; border-radius: 8px; cursor: pointer;" disabled>
+          Lancer l'audit
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+
+// REMPLIR LE SELECT APRÈS CRÉATION
+const clientSelect = modal.querySelector('#clientSelect');
+clientsData.forEach(client => {
+  const option = document.createElement('option');
+  option.value = client.id;
+  option.textContent = client.name;
+  clientSelect.appendChild(option);
+});
+
+  // gestion selection client -> projets
+  const projectSelect = modal.querySelector('#projectSelect');
+  const urlInput = modal.querySelector('#urlInput');
+  const confirmBtn = modal.querySelector('#confirmAudit');
+  
+  clientSelect.addEventListener('change', (e) => {
+    const clientId = parseInt(e.target.value);
+    const client = clientsData.find(c => c.id === clientId);
+    
+    projectSelect.innerHTML = '<option value="">Sélectionnez un projet</option>';
+    projectSelect.disabled = !client;
+    
+    if (client && client.projects) {
+      client.projects.forEach(project => {
+        projectSelect.innerHTML += `<option value="${project.id}">${project.name}</option>`;
+      });
+    }
+    
+    checkFormValidity();
+  });
+  
+  projectSelect.addEventListener('change', checkFormValidity);
+  urlInput.addEventListener('input', checkFormValidity);
+  
+  function checkFormValidity() {
+    const isValid = clientSelect.value && projectSelect.value && urlInput.value;
+    confirmBtn.disabled = !isValid;
+    confirmBtn.style.backgroundColor = isValid ? '#2358ff' : '#ccc';
+    confirmBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+  }
+  
+  // Fermer la modal
+modal.querySelector('#cancelAudit').addEventListener('click', () => {
+  document.body.removeChild(modal);
+});
+
+// Fermer en cliquant en dehors
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    document.body.removeChild(modal);
+  }
+});
+  
+  // Lancer l'audit
+  confirmBtn.addEventListener('click', async () => {
+    await launchAudit(parseInt(projectSelect.value), urlInput.value);
+    document.body.removeChild(modal);
+  });
+}
+
+// Fonction de lancement d'audit
+async function launchAudit(projectId, url) {
+  const response = await secureApiCall('/api/launch-audit', {
+    method: 'POST',
+    body: JSON.stringify({ projectId, url })
+  });
+  const data = await response.json();
+  
+  if (response.ok) {
+    console.log('✅ Audit lancé:', data);
+    
+    // Afficher le lien client dans une popup
+    showClientLink(data.audit.clientReportUrl, data.audit.client);
+    
+    // Recharger les données
+    await loadAudits();
+  } else {
+    alert('Erreur lors du lancement de l\'audit : ' + data.message);
+  }
+}
+
+
+// Event listener du bouton header également
+document.getElementById('launchAuditBtn2').addEventListener('click', async () => {
+  // D'abord charger les clients
+  await loadClientsForAudit();
+  
+  // Vérifier qu'on a bien des données
+  if (clientsData.length === 0) {
+    alert('Aucun client trouvé. Ajoutez d\'abord des clients.');
+    return;
+  }
+  
+  // Ensuite afficher le formulaire
+  showAuditForm();
+});
+
+// Charger au démarrage
+document.addEventListener('DOMContentLoaded', loadAudits);
+
+/* Nouvelle fonction pour afficher le lien client */
+function showClientLink(clientReportUrl, clientName) {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+  
+  modal.innerHTML = `
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+      <h3 style="margin-top: 0; color: #333; font-size: 18px; font-weight: 600;">🎉 Audit lancé avec succès !</h3>
+      <p style="margin: 20px 0; color: #666;">Lien unique pour <strong>${clientName}</strong> :</p>
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <input type="text" value="${clientReportUrl}" readonly 
+               style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px; background: white;">
+      </div>
+      <div style="text-align: right; margin-top: 20px;">
+        <button onclick="copyToClipboard('${clientReportUrl}')" 
+                style="background: #2358ff; color: white; border: none; padding: 10px 20px; border-radius: 6px; margin-right: 10px; cursor: pointer; font-weight: 500;">
+          📋 Copier le lien
+        </button>
+        <button onclick="this.closest('.client-link-modal').remove()" 
+                style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+          Fermer
+        </button>
+      </div>
+    </div>
+  `;
+  
+  modal.className = 'client-link-modal';
+  
+  // Sélectionner le texte au clic
+  modal.querySelector('input').addEventListener('click', function() {
+    this.select();
+  });
+  
+  // Fermer en cliquant à l'extérieur
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+  
+  document.body.appendChild(modal);
+}
+
+// Fonction pour copier dans le presse-papier
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Lien copié dans le presse-papier !');
+  }).catch(() => {
+    // Fallback pour les navigateurs plus anciens
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert('✅ Lien copié dans le presse-papier !');
+  });
+}
+
+// Initialiser Lucide icons
+lucide.createIcons();
+</script>
+</body>
+</html>

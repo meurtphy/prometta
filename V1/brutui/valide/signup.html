@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Inscription – BrutX Audit"/>
+  <title>Créer un compte – BrutX Audit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --c-bg: #fff;
+      --c-surface: #fff;
+    }
+    .dark-mode {
+      --c-bg: #1b1f24;
+      --c-surface: #101418;
+    }
+    body {
+      background: var(--c-bg);
+    }
+    .bg-white {
+      background-color: var(--c-surface) !important;
+      color: var(--c-text, #1b1f24) !important;
+    }
+    .dark-mode .bg-white {
+      color: #f6f7f9 !important;
+    }
+    .dark-mode input[type="email"],
+    .dark-mode input[type="password"],
+    .dark-mode input[type="text"],
+    .dark-mode input[type="url"] {
+      background-color: #23272f !important;
+      color: #f6f7f9 !important;
+      border-color: #2b3138 !important;
+    }
+    .dark-mode input[type="checkbox"] {
+      accent-color: #23272f;
+    }
+
+    /* Styles pour le toggle du mode sombre */
+    .dark-mode-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 9999;
+      width: 36px;
+      height: 20px;
+      cursor: pointer;
+    }
+    .dark-mode-toggle .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--c-border);
+      border-radius: 20px;
+      transition: .3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .dark-mode-toggle .slider:before {
+      content: "🌙";
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background: white;
+      border-radius: 50%;
+      transition: .3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+    }
+    .dark-mode-toggle input:checked + .slider:before {
+      transform: translateX(16px);
+      content: "☀️";
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <main
+    class="bg-white w-full max-w-md mx-auto rounded-2xl shadow-lg p-6 sm:p-8
+           flex flex-col"
+  >
+    <h1 class="text-2xl font-bold text-center mb-2">Créer un compte</h1>
+    <p class="text-center text-gray-600 text-sm mb-6">
+      Renseignez vos informations pour démarrer
+    </p>
+
+    <!-- Zone erreur -->
+    <div
+      id="errorMessage"
+      role="alert"
+      class="hidden mb-4 text-red-600 bg-red-100 px-4 py-2 rounded"
+    ></div>
+
+    <form id="registerForm" novalidate class="flex flex-col space-y-4">
+      <!-- Email -->
+      <div class="flex flex-col">
+        <label for="email" class="text-sm mb-1">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          aria-required="true"
+          placeholder="email@exemple.com"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Nom d'utilisateur -->
+      <div class="flex flex-col">
+        <label for="username" class="text-sm mb-1">Nom d’utilisateur</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          required
+          aria-required="true"
+          placeholder="Votre pseudo"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Mot de passe -->
+      <div class="flex flex-col">
+        <label for="password" class="text-sm mb-1">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          aria-required="true"
+          placeholder="••••••••"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Terms -->
+      <div class="flex items-start space-x-2">
+        <input
+          type="checkbox"
+          id="terms"
+          name="terms"
+          required
+          aria-required="true"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+        <label for="terms" class="text-sm">
+          J’accepte les <a href="#" class="text-blue-600 hover:underline">conditions générales</a>
+        </label>
+      </div>
+
+      <!-- Bouton -->
+      <button
+        type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold
+               py-2 rounded-md transition-all"
+      >
+        Créer mon compte
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-gray-600 mt-6">
+      Déjà inscrit ? 
+      <a href="index.html" class="text-blue-600 hover:underline">Se connecter</a>
+    </p>
+
+    <!-- Toggle dark mode -->
+    <label class="dark-mode-toggle" title="Thème sombre">
+      <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+      <span class="slider"></span>
+    </label>
+  </main>
+
+  <script>
+    (function() {
+      const BASE_URL = 'http://localhost:3000/api'; // ← ajuster en prod
+      const form = document.getElementById('registerForm');
+      const errorBox = document.getElementById('errorMessage');
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        errorBox.classList.add('hidden');
+
+        const payload = {
+          email: form.email.value.trim(),
+          username: form.username.value.trim(),
+          password: form.password.value,
+          termsAccepted: form.terms.checked
+        };
+
+        try {
+          const res = await fetch(`${BASE_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.message || 'Erreur lors de l\'inscription');
+          }
+
+          // Si le backend renvoie un token, on peut le stocker
+          if (data.token) {
+            localStorage.setItem('token', data.token);                    // ← Bon nom
+            localStorage.setItem('user', JSON.stringify(data.user));      // ← Ajouter user
+          }
+          // Redirection vers le dashboard après inscription réussie
+          window.location.href = data.redirect_url || 'dashboard.html';
+        } catch (err) {
+          errorBox.textContent = err.message;
+          errorBox.classList.remove('hidden');
+        }
+      });
+    })();
+
+    const html = document.documentElement;
+    const DM_KEY = 'brutux_dm';
+    const applyPref = val => html.classList.toggle('dark-mode', val);
+    applyPref(
+      localStorage.getItem(DM_KEY) === '1' ||
+      (localStorage.getItem(DM_KEY) === null && window.matchMedia('(prefers-color-scheme:dark)').matches)
+    );
+
+    // Gestion du toggle du mode sombre
+    const dmToggle = document.getElementById('dm-toggle');
+    dmToggle.addEventListener('change', () => {
+      const isChecked = dmToggle.checked;
+      localStorage.setItem(DM_KEY, isChecked ? '1' : '0');
+      applyPref(isChecked);
+    });
+  </script>
+</body>
+</html>

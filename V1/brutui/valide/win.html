@@ -1,0 +1,511 @@
+<!-- audit_report.html – Brutux Studio (refonte propre 2025) -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit Report · Brutux Studio</title>
+
+<!-- Inter + Font Awesome -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer"/>
+
+<style>
+/* =============================================================
+   Brutux Studio – Audit Report  |  Clean rebuild  (≈ 420 lignes)
+   ============================================================= */
+
+/* ---------- 1. Design tokens ---------- */
+:root{
+ /* Palette (Light) */
+ --c-primary:#2358ff;  --c-primary-10:#edf2ff;
+ --c-secondary:#2ec971;
+ --c-danger:#ff6464;   --c-warning:#ffb92e;
+ --c-bg:#f7f9fc;       --c-surface:#ffffff;
+ --c-border:#e1e5ec;
+ --c-text:#1a1c21;     --c-text-soft:#6b707a;
+ --c-track:#e5e9f2;
+
+ /* Typo & layout */
+ --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-h2:1.25rem; --fs-h3:1.55rem;
+ --radius:12px; --shadow:0 2px 6px rgb(0 0 0 /.06);
+ --gap-2:.4rem; --gap-3:.8rem; --gap-4:1.2rem; --gap-5:2rem;
+ --sidebar-w:260px;
+}
+
+/* Dark-mode overrides */
+.dark{
+ --c-bg:#101418; --c-surface:#1b1f24; --c-border:#2b3138;
+ --c-text:#f6f7f9; --c-text-soft:#abb1be;
+ --c-primary-10:#203066; --c-track:#2b3138;
+ color-scheme:dark;
+}
+
+/* ---------- 2. Reset ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html{font-size:100%}
+body{
+ margin:0;font-family:"Inter",system-ui,sans-serif;font-size:var(--fs-base);line-height:1.52;
+ background:var(--c-bg);color:var(--c-text);-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0;font-weight:600}
+p{margin:.25em 0}
+ul{margin:0;padding:0;list-style:none}
+a{text-decoration:none;color:inherit}
+button,select{font:inherit;border:none;background:none;cursor:pointer}
+img{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
+
+/* ---------- 3. Layout ---------- */
+.wrapper{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100vh}
+
+/* Sidebar */
+.aside{
+ background:var(--c-surface);border-right:1px solid var(--c-border);
+ padding:var(--gap-5) var(--gap-3);display:flex;flex-direction:column;gap:var(--gap-4);
+ transition:transform .35s ease}
+.logo{font-size:var(--fs-h3);color:var(--c-primary);text-decoration:none;transition:color 0.2s}
+.logo:hover{color:#1740e0}
+.nav-group>h4{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em;
+ margin-bottom:var(--gap-2);color:var(--c-text-soft)}
+.nav-group li{
+ display:flex;align-items:center;gap:var(--gap-2);padding:.45rem .6rem;border-radius:var(--radius);
+ color:var(--c-text-soft);cursor:pointer;transition:background .15s,color .15s}
+.nav-group li i{width:18px;text-align:center}
+.nav-group li:hover,.nav-group li.active{background:var(--c-primary-10);color:var(--c-primary)}
+.scroll{overflow-y:auto;max-height:28vh;padding-right:.3rem}
+
+@media (max-width:900px){
+ .aside{position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);transform:translateX(-100%);
+  z-index:900;box-shadow:0 0 0 100vmax rgb(0 0 0 /.3);backdrop-filter:blur(2px)}
+ .aside.open{transform:translateX(0)}
+}
+
+/* Main */
+.main{display:flex;flex-direction:column;gap:var(--gap-5);padding:var(--gap-5);overflow-x:hidden}
+
+/* ---------- 4. Top-bar ---------- */
+.topbar{
+ background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:.7rem 1rem;
+ display:flex;justify-content:space-between;align-items:center;gap:var(--gap-4)}
+.burger{display:none;font-size:1.5rem;color:var(--c-primary)}
+@media (max-width:900px){.burger{display:block}}
+.breadcrumbs{display:flex;align-items:center;gap:.35rem;font-size:var(--fs-sm);color:var(--c-text-soft)}
+.breadcrumbs .sep{opacity:.5}.breadcrumbs a:hover{text-decoration:underline}
+.actions{display:flex;align-items:center;gap:var(--gap-3)}
+.btn{
+ display:inline-flex;align-items:center;gap:.4rem;padding:.48rem .95rem;border-radius:var(--radius);
+ font-weight:600;font-size:var(--fs-sm);transition:background .15s}
+.btn i{font-size:.85em}.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--c-primary);color:#fff}.btn.primary:hover{background:#1740e0}
+.btn.ghost{border:1px solid var(--c-border);background:var(--c-surface);color:var(--c-text-soft)}
+.btn.ghost:hover{border-color:var(--c-primary);color:var(--c-primary)}
+/* dark-mode switch */
+.switch{position:relative;width:40px;height:22px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;border-radius:22px;background:var(--c-border);transition:.2s}
+.slider:before{content:\"\";position:absolute;height:18px;width:18px;left:2px;bottom:2px;
+ background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--c-primary)}input:checked+.slider:before{transform:translateX(18px)}
+.user{display:flex;align-items:center;gap:.5rem}.user img{width:32px;height:32px;border-radius:50%}
+.user .name{font-size:var(--fs-sm)}
+
+/* ---------- 5. Tabs ---------- */
+.tabs{display:flex;gap:var(--gap-3);overflow:auto}
+.tab{
+ padding:.55rem 1.1rem;border:1px solid var(--c-border);border-radius:var(--radius);
+ background:var(--c-surface);font-size:var(--fs-sm);font-weight:600;color:var(--c-text-soft);
+ white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
+.tab.active{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.tab:hover:not(.active){color:var(--c-primary)}
+.tab-content{display:none;flex-direction:column;gap:var(--gap-5)}
+.tab-content.active{display:flex}
+
+/* ---------- 6. Panels ---------- */
+.panel{
+ background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:var(--gap-4) var(--gap-5);display:flex;flex-direction:column;gap:var(--gap-4)}
+.panel header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-3)}
+.panel header h2{font-size:var(--fs-h2)}
+.panel select{background:var(--c-bg);padding:.42rem .9rem;border:1px solid var(--c-border);
+ border-radius:var(--radius);font-size:var(--fs-sm)}
+
+/* ---------- 7. Stat cards ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--gap-3)}
+.stats article{
+ background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);padding:var(--gap-3) var(--gap-4);text-align:center;display:flex;
+ flex-direction:column;gap:.25rem}
+.big{font-size:1.9rem;font-weight:700;color:var(--c-primary)}
+
+/* ---------- 8. Table ---------- */
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.table th,.table td{padding:.7rem .6rem;text-align:left}
+.table thead{background:var(--c-primary-10)}
+.table tbody tr{border-bottom:1px solid var(--c-border)}
+.table tbody tr:hover{background:var(--c-primary-10)}
+.score.\+,.projection.\+{color:var(--c-secondary)}
+.score.\-,.projection.\-{color:var(--c-danger)}
+.badge{padding:.2rem .65rem;border-radius:20px;font-weight:600;font-size:var(--fs-xs);display:inline-block;color:#fff}
+.badge.ok{background:var(--c-secondary)}.badge.warning{background:var(--c-warning)}
+.badge.danger{background:var(--c-danger)}
+
+/* ---------- 9. Quick Wins ---------- */
+.qw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gap-3)}
+.qw{
+ background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);
+ box-shadow:var(--shadow);display:flex;flex-direction:column}
+.qw header{padding:var(--gap-3) var(--gap-4);font-weight:700;font-size:var(--fs-sm)}
+.qw .body{display:flex;gap:var(--gap-3);padding:0 var(--gap-4) var(--gap-3)}
+.qw img{width:72px;height:72px;border-radius:8px;object-fit:cover}
+.qw footer{display:flex;gap:var(--gap-3);padding:var(--gap-3) var(--gap-4) var(--gap-4)}
+.qw .btn{flex:1;text-align:center;font-size:var(--fs-sm)}
+
+/* ---------- 10. Synthèse ---------- */
+.syn{display:grid;grid-template-columns:120px 1fr;row-gap:.65rem;font-size:var(--fs-sm)}
+.syn dt{font-weight:700;color:var(--c-text-soft)}
+.syn dd{margin:0}
+
+/* ---------- 11. Responsive quick tweaks ---------- */
+@media (max-width:600px){
+ .panel{padding:var(--gap-3)}
+ .stats article{padding:var(--gap-3)}
+ .syn{grid-template-columns:1fr}
+}
+
+/* ============================================================= */
+
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="aside" id="aside">
+    <a href="dashboard.html" class="logo">Prometa</a>
+
+    <div class="nav-group">
+      <ul>
+        <li onclick="window.location.href='dashboard.html'">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+        </li>
+        <li onclick="window.location.href='clients.html'">
+          <i data-lucide="users" class="w-5 h-5"></i> Clients
+        </li>
+        <li onclick="window.location.href='nouveau-projet.html'">
+          <i data-lucide="plus-circle" class="w-5 h-5"></i> Nouveau Projet
+        </li>
+        <li onclick="window.location.href='audit.html'">
+          <i data-lucide="search" class="w-5 h-5"></i> Audit
+        </li>
+        <li class="active">
+          <i data-lucide="file-text" class="w-5 h-5"></i> Rapport
+        </li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <h4>Audits récents</h4>
+      <ul class="scroll">
+        <li class="active">Audit #1</li><li>Audit #2</li><li>Audit #3</li><li>Audit #4</li><li>Audit #5</li>
+        <li>Audit #6</li><li>Audit #7</li><li>Audit #8</li><li>Audit #9</li><li>Audit #10</li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <ul>
+        <li><i class="fa-solid fa-archive"></i> Archives</li>
+        <li><i class="fa-solid fa-gear"></i> Paramètres</li>
+        <li onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+
+    <!-- Top-bar -->
+    <header class="topbar">
+      <button class="burger" id="burger"><i class="fa-solid fa-bars"></i></button>
+
+      <nav class="breadcrumbs">
+        <a href="dashboard.html">Dashboard</a><span class="sep">›</span><a href="audit.html">Audit</a><span class="sep">›</span><a href="#">26 / 04 / 2025</a>
+      </nav>
+
+      <div class="actions">
+        <button class="btn primary" onclick="window.location.href='nouveau-projet.html'"><i class="fa-solid fa-plus"></i>Nouveau audit</button>
+        <button class="btn ghost"><i class="fa-solid fa-file-export"></i> Export PDF</button>
+
+        <label class="dark-mode-toggle" title="Thème sombre">
+          <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+          <span class="slider"></span>
+        </label>
+
+        <div class="user"><span class="name">Tom&nbsp;ADAMS</span><img src="https://i.pravatar.cc/32?u=tom" alt=""></div>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active">Recommandations</button>
+      <button class="tab">Quick Wins</button>
+      <button class="tab">Synthèse</button>
+      <button class="tab">Tâches</button>
+      <button class="tab">Archives</button>
+    </nav>
+
+    <!-- -------------------- TAB 1 : Recommandations -------------------- -->
+    <section class="tab-content active">
+
+      <!-- Stat cards -->
+      <div class="stats">
+        <article><span class="big">47</span>Recommandations<br>identifiées</article>
+        <article><span class="big">3</span>Recommandations<br>traitées</article>
+        <article><span class="big">2</span>Recommandations<br>en cours</article>
+        <article><span class="big">45</span>Recommandations<br>non traitées</article>
+      </div>
+
+      <!-- Tableau Analyse UX -->
+      <div class="panel">
+        <header>
+          <h2>Analyse UX</h2>
+          <select><option>Niveau de criticité</option></select>
+        </header>
+
+        <div style="overflow:auto">
+          <table class="table">
+            <thead><tr><th>Critère UX</th><th>Élément</th><th>Score</th><th>Recommandation</th><th>Projection</th><th>Criticité</th><th>Captures</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>Visibilité du statut</td><td>Formulaire</td><td class="score -">60%</td>
+                  <td>Ajouter confirmation</td><td class="projection +">+12%</td><td><span class="badge warning">Moyenne</span></td>
+                  <td>2</td><td><i class="fa-solid fa-ellipsis-vertical"></i></td></tr>
+              <tr><td>Cohérence visuelle</td><td>Header</td><td class="score +">78%</td>
+                  <td>Aligner paddings</td><td class="projection +">+8%</td><td><span class="badge ok">Faible</span></td>
+                  <td>1</td><td><i class="fa-solid fa-ellipsis-vertical"></i></td></tr>
+              <tr><td>Contrôle & liberté</td><td>Bouton Annuler</td><td class="score -">52%</td>
+                  <td>Ajouter étape</td><td class="projection +">+15%</td><td><span class="badge danger">Élevée</span></td>
+                  <td>3</td><td><i class="fa-solid fa-ellipsis-vertical"></i></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------- TAB 2 : Quick Wins -------------------- -->
+    <section class="tab-content">
+      <div class="panel">
+        <header><h2>Quick Wins</h2></header>
+
+        <div class="qw-grid">
+          <article class="qw">
+            <header>Message de confirmation</header>
+            <div class="body">
+              <img src="https://picsum.photos/id/1015/72" alt="">
+              <div>
+                <p class="badge ok">Faible effort</p>
+                <p style="font-size:var(--fs-sm)">Ajouter un message “Merci !” après envoi</p>
+              </div>
+            </div>
+            <footer><button class="btn ghost">Créer tâche</button><button class="btn ghost">Détails</button></footer>
+          </article>
+
+          <article class="qw">
+            <header>Réduire poids image</header>
+            <div class="body">
+              <img src="https://picsum.photos/id/1050/72" alt="">
+              <div>
+                <p class="badge warning">Moyen effort</p>
+                <p style="font-size:var(--fs-sm)">Compresser à 120 Ko</p>
+              </div>
+            </div>
+            <footer><button class="btn ghost">Créer tâche</button><button class="btn ghost">Détails</button></footer>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------- TAB 3 : Synthèse -------------------- -->
+    <section class="tab-content">
+      <div class="panel">
+        <header><h2>Synthèse stratégique</h2><button class="btn ghost">Copier</button></header>
+        <dl class="syn">
+          <dt>Contexte</dt><dd>L’audit du 26/04/2025 met en avant plusieurs axes d’amélioration majeurs.</dd>
+          <dt>Constats</dt><dd>Score global : 63 %. Bon UX/UI, freins en SEO.</dd>
+          <dt>Leviers</dt><dd>Quick wins identifiés (effort ↘, impact ↗).</dd>
+          <dt>Gains</dt><dd>+19 pts potentiels après priorisation.</dd>
+          <dt>Reco.</dt><dd>Prioriser quick wins UX puis correctifs SEO.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- -------------------- TAB 4 : Tâches -------------------- -->
+    <section class="tab-content">
+      <div class="panel">
+        <header><h2>Tâches créées</h2>
+          <div style="display:flex;gap:var(--gap-3)">
+            <select><option>Deadline</option></select>
+            <select><option>Assignée à</option></select>
+            <select><option>Status</option></select>
+          </div>
+        </header>
+
+        <div style="overflow:auto">
+          <table class="table">
+            <thead><tr><th>Tâche</th><th>Élément</th><th>Deadline</th><th>Assignée</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>Ajouter message de confirmation</td><td>Formulaire</td><td>15/05/2025</td><td>Victor</td><td><span class="badge warning">À faire</span></td><td>…</td></tr>
+              <tr><td>Corriger H1 dupliqué</td><td>Homepage</td><td>12/05/2025</td><td>Dev</td><td><span class="badge ok">Fait</span></td><td>…</td></tr>
+              <tr><td>Optimiser contraste</td><td>Produits</td><td>—</td><td>—</td><td><span class="badge danger">Non planifié</span></td><td>…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------- TAB 5 : Archives -------------------- -->
+    <section class="tab-content">
+      <div class="panel">
+        <header><h2>Recommandations archivées</h2><select><option>Critères UX</option></select></header>
+
+        <div style="overflow:auto">
+          <table class="table">
+            <thead><tr><th>Critère UX</th><th>Élément</th><th>Score</th><th>Reco.</th><th>Projection</th><th>Criticité</th><th>Captures</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>Feedback utilisateur</td><td>Formulaire</td><td class="score +">68%</td>
+                  <td>Ajouter loader</td><td class="projection +">+8%</td><td><span class="badge warning">Moyenne</span></td>
+                  <td>1</td><td>—</td></tr>
+              <tr><td>Lisibilité</td><td>Footer</td><td class="score +">70%</td>
+                  <td>Contraste texte</td><td class="projection +">+6%</td><td><span class="badge ok">Faible</span></td>
+                  <td>1</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div><!-- /wrapper -->
+
+<!-- ---------- JS (tabs + dark-mode + sidebar + secure) ---------- -->
+<script src="js/auth.js"></script>
+<script>
+/* Sidebar */
+document.getElementById('burger').addEventListener('click',()=>document.getElementById('aside').classList.toggle('open'));
+
+/* Dark-mode */
+const html = document.documentElement;
+const dmToggle = document.getElementById('dm-toggle');
+const DM_KEY = 'brutux_dm';
+const applyPref = val => html.classList.toggle('dark', val);
+applyPref(
+  localStorage.getItem(DM_KEY) === '1' ||
+  (localStorage.getItem(DM_KEY) === null && window.matchMedia('(prefers-color-scheme:dark)').matches)
+);
+if (dmToggle) {
+  dmToggle.checked = html.classList.contains('dark');
+  dmToggle.addEventListener('change', e => {
+    const on = e.target.checked;
+    applyPref(on);
+    localStorage.setItem(DM_KEY, on ? '1' : '0');
+  });
+}
+
+/* Tabs */
+const tabs=[...document.querySelectorAll('.tab')],contents=[...document.querySelectorAll('.tab-content')];
+tabs.forEach((t,i)=>t.addEventListener('click',()=>{
+  tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');
+  contents.forEach(c=>c.classList.remove('active'));contents[i].classList.add('active');
+}));
+
+/* Récupérer projectId depuis l'URL */
+const urlParams = new URLSearchParams(window.location.search);
+const projectId = urlParams.get('projectId');
+
+/* Charger les données du projet */
+async function loadProjectData() {
+  if (!projectId) {
+    console.log("Aucun projectId dans l'URL");
+    return;
+  }
+  
+  try {
+    const response = await secureApiCall(`/api/audits/${projectId}`);
+    if (response) {
+      const result = await response.json();
+      
+      if (response.ok && result.audits && result.audits.length > 0) {
+        const projectData = result.audits[0];
+        console.log('Données projet chargées:', projectData);
+        
+        // Mettre à jour le nom du client
+        const userName = document.querySelector('.user .name');
+        if (userName && projectData.project && projectData.project.client) {
+          userName.textContent = projectData.project.client.name;
+        }
+        
+        // Mettre à jour la date de l'audit
+        const breadcrumbDate = document.querySelector('.breadcrumbs a:last-child');
+        if (breadcrumbDate) {
+          const auditDate = new Date(projectData.createdAt);
+          breadcrumbDate.textContent = auditDate.toLocaleDateString('fr-FR');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erreur chargement données projet:', error);
+  }
+}
+
+/* Charger au démarrage */
+document.addEventListener('DOMContentLoaded', loadProjectData);
+</script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    window.lucide?.createIcons();
+  });
+</script>
+</body>
+</html>

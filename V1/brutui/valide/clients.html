@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<!--
+  Dashboard Clients – version UI/UX améliorée et corrigée ✅
+  Changements clés :
+   • Suppression du caractère BOM (U+FEFF) qui provoquait « Invalid or unexpected token »
+   • Encapsulation du JS dans une IIFE + « use strict »
+   • Sécurisation des accès localStorage avec un helper safeParse()
+   • Appel automatique à lucide.createIcons() quand le DOM est prêt
+   • Valeurs normalisées pour les <select> (pageSize, filtres…)
+   • Quelques légères optimisations de rendu (classes Tailwind)
+   • Aucune modification des IDs/classes référencés par les scripts
+-->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clients · BrutX Audit</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+
+  <!-- Icônes Lucide -->
+  <script defer src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Police système par défaut pour de meilleures performances -->
+  <style>
+/* Variables CSS exactement comme audit.html */
+:root{
+  /*— Couleurs & CSS —*/
+  --c-primary:#2358ff;           --c-primary-10:#edf2ff;
+  --c-secondary:#2ec971;
+  --c-danger:#ff6464;
+  --c-bg:#f7f9fc;                --c-surface:#ffffff;
+  --c-border:#e1e5ec;
+  --c-text:#1a1c21;              --c-text-soft:#6b707a;
+  --c-gauge-track:#e5e9f2;
+  
+  /* — Typo & spacing —*/
+  --fs-0:14px; --fs-1:15px; --fs-2:1.25rem; --fs-3:1.55rem;
+  --radius:12px; --shadow:0 2px 6px rgb(0 0 0 /.06);
+  --gap-xs:.4rem;--gap-s:.8rem;--gap-m:1.2rem;--gap-l:2rem;
+  --sidebar-w:260px;
+}
+
+/* ===================== DARK THEME ========================= */
+@media(prefers-color-scheme:dark){
+ :root{color-scheme:dark; /* pour input native */}
+}
+.dark-mode{
+ /* Surface & texte */
+ --c-bg:#101418;           --c-surface:#1b1f24;
+ --c-border:#2b3138;
+ --c-text:#f6f7f9;         --c-text-soft:#a2a8b3;
+
+ /* Variantes spécifiques */
+ --c-primary-10:#203066;   /* bleu  + opacité pour les fonds   */
+ --c-gauge-track:#2b3138;  /* gris foncé dans les jauges/table */
+}
+
+/* ---------- Reset / base ---------- */
+*,*:before,*:after{box-sizing:border-box}
+html{font-size:100%}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;font-size:var(--fs-1);
+ background:var(--c-bg);color:var(--c-text);line-height:1.52;-webkit-font-smoothing:antialiased}
+
+/* ---------- Layout global ---------- */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--c-surface);border-right:1px solid var(--c-border);
+ padding:var(--gap-l) var(--gap-m);display:flex;flex-direction:column;overflow:hidden;
+ box-shadow:var(--shadow)}
+
+.main{flex:1;background:var(--c-bg);overflow:hidden;display:flex;flex-direction:column}
+
+.topbar{background:var(--c-surface);border-bottom:1px solid var(--c-border);
+ padding:var(--gap-m) var(--gap-l);display:flex;align-items:center;justify-content:space-between;
+ box-shadow:var(--shadow)}
+
+/* Dark Mode Toggle fixe - Version mini */
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.dark-mode-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.dark-mode-toggle input:checked + .slider {
+  background: var(--c-primary);
+}
+
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+
+/* Styles TailwindCSS en Dark Mode */
+.dark-mode .bg-white {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .bg-gray-50,
+.dark-mode .bg-gray-100 {
+  background-color: var(--c-gauge-track) !important;
+}
+
+.dark-mode .border-b,
+.dark-mode .border-r,
+.dark-mode .border {
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-900 {
+  color: var(--c-text-soft) !important;
+}
+
+.dark-mode input,
+.dark-mode select {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .bg-blue-50 {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .text-blue-700 {
+  color: var(--c-primary) !important;
+}
+
+.dark-mode aside {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+/* Style Logo exactement comme audit.html */
+.brand-logo {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--c-primary) !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important; /* ← Ajouter cette ligne */
+  transition: color 0.2s !important; /* ← Ajouter cette ligne */
+}
+
+.brand-logo:hover {
+  color: #1d4ed8 !important; /* ← Ajouter cette règle */
+}
+
+/* Mode sombre */
+.dark-mode .brand-logo {
+  color: var(--c-primary);
+}
+
+/* Styles de survol TailwindCSS complets */
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb !important;
+  color: inherit !important;
+}
+
+.hover\:bg-gray-100:hover {
+  background-color: #f3f4f6 !important;
+  color: inherit !important;
+}
+
+.hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+  color: var(--c-primary) !important;
+}
+
+.hover\:text-blue-700:hover {
+  color: var(--c-primary) !important;
+}
+
+/* Mode sombre - survols */
+.dark-mode .hover\:bg-gray-50:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .hover\:bg-gray-100:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+</style>
+</head>
+<body class="min-h-screen">
+<!-- Dark-mode switch en position fixe -->
+<label class="dark-mode-toggle" title="Thème sombre">
+  <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+  <span class="slider"></span>
+</label>
+
+  <!-- =============== WRAPPER GLOBAL ================= -->
+  <div class="flex min-h-screen">
+
+    <!-- ░░ ASIDE / SIDEBAR ░░ -->
+    <aside class="w-64 hidden lg:flex flex-col border-r bg-white">
+      <!-- Logo & brand -->
+<div class="px-6 py-6 flex items-center gap-3">
+  <a href="dashboard.html" class="brand-logo">Prometa</a>
+</div>
+
+      <!-- Navigation principale -->
+      <nav class="flex-1 overflow-y-auto px-4 space-y-8">
+        <!-- ▼ Pages principales -->
+<div class="space-y-2">
+  <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Navigation</p>
+  <div class="space-y-1">
+    <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+      Dashboard
+    </a>
+    <a href="clients.html" class="flex items-center gap-3 px-3 py-2 rounded-md bg-blue-50 text-blue-700 font-medium">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      Clients
+    </a>
+    <a href="nouveau-projet.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i>
+      Nouveau Projet
+    </a>
+    <a href="audit.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+      <i data-lucide="search" class="w-5 h-5"></i>
+      Audit
+    </a>
+    <a href="win.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+      <i data-lucide="file-text" class="w-5 h-5"></i>
+      Rapport
+    </a>
+  </div>
+</div>
+
+        <!-- ▼ Sélecteur d’espace -->
+        <div class="space-y-2">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Espace</p>
+          <select id="espaceSelect" class="w-full px-3 py-2 rounded-md bg-gray-50 border text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+  <option value="">Tous les clients</option>
+</select>
+        </div>
+
+        <!-- ▼ Audits récents -->
+        <div class="space-y-2">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Audits récents</p>
+          <ul class="space-y-1 text-sm">
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #1</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #2</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #3</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #4</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #5</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #6</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #7</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #8</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #9</a></li>
+            <li><a href="#" class="block px-3 py-1.5 rounded hover:bg-gray-100">Audit #10</a></li>
+          </ul>
+        </div>
+
+        <!-- ▼ Archives, Réglages, Déconnexion -->
+        <div class="space-y-1 pt-6 border-t">
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+            <i data-lucide="archive" class="w-4 h-4"></i> Archives
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+            <i data-lucide="settings" class="w-4 h-4"></i> Réglages
+          </a>
+          <a href="#" onclick="logout()" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Déconnexion
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ░░ MAIN CONTENT WRAPPER ░░ -->
+    <div class="flex-1 flex flex-col">
+
+      <!-- ✦ BARRE UTILISATEUR (top-bar droite) -->
+      <div class="h-14 bg-white border-b flex items-center justify-end gap-6 px-4 lg:px-8">
+        <button class="relative p-2 rounded-full hover:bg-gray-100 focus:outline-none" aria-label="Notifications">
+          <i data-lucide="bell" class="w-5 h-5 text-gray-600"></i>
+        </button>
+        <div class="flex items-center gap-2 cursor-pointer select-none">
+          <img src="https://i.pravatar.cc/40?u=Tom" alt="Tom Adams" class="w-8 h-8 rounded-full" />
+          <div class="leading-tight">
+            <p class="font-medium text-sm">Tom ADAMS</p>
+            <p class="text-[11px] text-gray-500">Admin</p>
+          </div>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500"></i>
+        </div>
+      </div>
+
+      <!-- ✦ HEADER (titre + recherche + CTA) -->
+      <header class="bg-white border-b px-4 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <!-- Titre & retour -->
+        <div class="flex items-center gap-3">
+          <button onclick="history.back()" class="p-2 rounded-full hover:bg-gray-100" aria-label="Retour">
+            <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600"></i>
+          </button>
+          <h1 class="text-2xl font-bold tracking-tight">Tous les clients</h1>
+        </div>
+
+        <!-- Recherche + CTA -->
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-1 md:flex-none">
+            <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
+            <input id="searchDesktop" type="text" placeholder="Rechercher" class="w-full md:w-72 pl-10 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+
+          <a href="#" onclick="ajouterClient()" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-700 text-white text-sm shadow-sm hover:bg-blue-800 whitespace-nowrap">
+            <i data-lucide="plus" class="w-4 h-4"></i> Nouveau client
+          </a>
+        </div>
+      </header>
+
+      <!-- ✦ BARRE OUTILS MOBILE -->
+      <div class="md:hidden p-4 flex flex-col gap-3 border-b bg-white shadow-sm">
+        <div class="flex items-center gap-2">
+          <i data-lucide="search" class="w-5 h-5 text-gray-400"></i>
+          <input id="searchMobile" type="text" placeholder="Rechercher…" class="flex-1 px-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+        <button class="flex items-center gap-2 self-end px-4 py-2 text-sm rounded-md text-white bg-blue-700 hover:bg-blue-800 sm:hidden">
+          <i data-lucide="plus" class="w-4 h-4"></i> Client
+        </button>
+      </div>
+
+      <!-- ✦ CONTENU PRINCIPAL -->
+      <main class="flex-1 overflow-y-auto p-6 space-y-8 max-w-7xl mx-auto w-full">
+
+        <!-- ■■■ STATISTIQUES GLOBALES ■■■ -->
+        <section class="bg-gray-100 rounded-xl p-6 space-y-5">
+          <h2 class="text-lg font-semibold text-gray-800">Statistiques globales</h2>
+          <div id="kpiWrap" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+        </section>
+
+        <!-- ■■■ LISTE DES CLIENTS ■■■ -->
+        <section class="bg-white rounded-lg shadow-sm">
+
+          <!-- En-tête & filtres -->
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-6 py-4 border-b">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i data-lucide="users" class="w-5 h-5"></i>
+              Liste des clients
+            </h2>
+
+            <!-- Filtres & toggles -->
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Statut -->
+              <select id="filtStatus" class="px-3 py-2 bg-gray-50 border rounded-md text-sm focus:ring-2 focus:ring-blue-600">
+                <option value="all">Tous les clients</option>
+                <option value="active">Clients actifs (< 6 mois)</option>
+                <option value="inactive">Clients inactifs (> 6 mois)</option>
+              </select>
+
+              <!-- Tri -->
+              <select id="sortSel" class="px-3 py-2 bg-gray-50 border rounded-md text-sm focus:ring-2 focus:ring-blue-600">
+                <option value="name">Nom (A→Z)</option>
+                <option value="projects">Nombre de projets</option>
+                <option value="activity">Dernière activité</option>
+              </select>
+
+              <!-- Vue : table / cartes -->
+              <div class="flex items-center bg-gray-100 border rounded-md overflow-hidden">
+                <button id="btnTable" class="px-3 py-2 text-sm flex items-center gap-1 bg-white shadow-inner" aria-label="Afficher en tableau">
+                  <i data-lucide="rows" class="w-4 h-4"></i>
+                </button>
+                <button id="btnCards" class="px-3 py-2 text-sm flex items-center gap-1" aria-label="Afficher en cartes">
+                  <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contenu liste -->
+          <div class="p-6">
+            <!-- Vue Cartes -->
+            <section id="viewCards" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 hidden"></section>
+
+            <!-- Vue Tableau -->
+            <section id="viewTable" class="overflow-x-auto bg-white rounded-lg shadow-sm">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 text-gray-600 whitespace-nowrap">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Nom du client</th>
+                    <th class="px-4 py-3 text-center">Nombre de projets</th>
+                    <th class="px-4 py-3 text-center">Nombre d'audits</th>
+                    <th class="px-4 py-3 text-center">Score moyen</th>
+                    <th class="px-4 py-3 text-center">Dernier audit</th>
+                    <th class="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </section>
+          </div>
+
+          <!-- Pagination -->
+          <div id="pager" class="flex items-center justify-between text-xs text-gray-500 px-6 py-3 border-t hidden">
+            <span id="pagerInfo"></span>
+            <div class="flex gap-2">
+              <button id="prev" class="p-2 rounded hover:bg-gray-100 disabled:opacity-40" aria-label="Page précédente">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <button id="next" class="p-2 rounded hover:bg-gray-100 disabled:opacity-40" aria-label="Page suivante">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <select id="pageSize" class="px-2 py-1 border rounded bg-gray-50">
+              <option value="10">10 par page</option>
+              <option value="25">25 par page</option>
+              <option value="50">50 par page</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Message vide -->
+        <p id="emptyMsg" class="text-center text-gray-500 hidden">Aucun client.</p>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+
+  <!-- =============== SCRIPTS =============== -->
+  <script>
+  (() => {
+  "use strict";
+
+  /*******************************
+   * Helpers utilitaires génériques
+   *******************************/
+  const $  = (q) => document.querySelector(q);
+  const $$ = (q) => [...document.querySelectorAll(q)];
+
+  // Parsing localStorage en toute sécurité 🛡️
+  const safeParse = (key, fallback = []) => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  /*******************************
+   * Données MOCK – remplacera par API
+   *******************************/
+  if (!localStorage.getItem("clients")) {
+    const demoClients = Array.from({ length: 18 }, (_, i) => ({ id: i + 1, name: `Client ${i + 1}` }));
+    localStorage.setItem("clients", JSON.stringify(demoClients));
+    localStorage.setItem(
+      "projects",
+      JSON.stringify(
+        demoClients.flatMap((c) =>
+          Array.from({ length: Math.ceil(Math.random() * 5) }, (_, j) => ({
+            id: c.id * 10 + j,
+            clientId: c.id,
+            updated: Date.now() - Math.random() * 360 * 864e5,
+          }))
+        )
+      )
+    );
+    localStorage.setItem(
+      "audits",
+      JSON.stringify(
+        demoClients.flatMap((c) =>
+          Array.from({ length: Math.ceil(Math.random() * 10) }, (_, j) => ({
+            id: c.id * 100 + j,
+            clientId: c.id,
+            score: 50 + Math.round(Math.random() * 50),
+            date: Date.now() - Math.random() * 360 * 864e5,
+          }))
+        )
+      )
+    );
+  }
+
+  // Variables globales pour stocker les données API
+let apiData = {
+  clients: [],
+  projects: [],
+  audits: []
+};
+
+// Fonction pour charger les données depuis l'API
+async function loadDataFromAPI() {
+  try {
+    const clientsResponse = await secureApiCall('/api/clients');
+    const clientsResult = await clientsResponse.json();
+    
+    if (clientsResponse.ok && clientsResult.clients) {
+      apiData.clients = clientsResult.clients.map(client => ({
+        id: client.id,
+        name: client.name
+      }));
+      apiData.projects = [];
+      apiData.audits = [];
+      clientsResult.clients.forEach(client => {
+        if (client.projects) {
+          client.projects.forEach(project => {
+            apiData.projects.push({
+              id: project.id,
+              clientId: project.clientId,
+              updated: new Date(project.updatedAt).getTime()
+            });
+            if (project.audits) {
+              project.audits.forEach(audit => {
+                apiData.audits.push({
+                  id: audit.id,
+                  clientId: project.clientId,
+                  score: getScoreFromResults(audit.results) || parseInt(audit.score) || 0,
+                  date: new Date(audit.createdAt).getTime()
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erreur chargement données API:', error);
+    apiData.clients = safeParse("clients");
+    apiData.projects = safeParse("projects");
+    apiData.audits = safeParse("audits");
+  }
+}
+
+// Remplacer store par apiData
+const store = apiData;
+
+  /*******************************
+   * Fonctions métiers (KPIs, listes)
+   *******************************/
+  const auditsByClient   = (id) => store.audits.filter((a) => a.clientId === id);
+  const projectsByClient = (id) => store.projects.filter((p) => p.clientId === id);
+
+  const lastAuditDate = (id) => {
+    const a = auditsByClient(id).sort((x, y) => y.date - x.date)[0];
+    return a ? new Date(a.date).toLocaleDateString() : "—";
+  };
+
+  const avgScore = (id) => {
+    const a = auditsByClient(id);
+    return a.length ? Math.round(a.reduce((s, r) => s + r.score, 0) / a.length) : 0;
+  };
+
+  const colorScore = (s) => (s >= 80 ? "bg-green-500" : s >= 60 ? "bg-yellow-500" : "bg-red-500");
+
+  /*******************************
+   * Rendu KPI
+   *******************************/
+  function renderKPI() {
+    const wrap = $("#kpiWrap");
+    const totalClients = store.clients.length;
+    const avgAudits = totalClients ? Math.round(store.audits.length / totalClients) : 0;
+    const avgScoreAll = store.audits.length ? Math.round(store.audits.reduce((s, a) => s + a.score, 0) / store.audits.length) : 0;
+    const inactiveCnt = store.clients.filter((c) => {
+      const last = Math.max(...auditsByClient(c.id).map((a) => a.date), 0);
+      return Date.now() - last >= 180 * 864e5;
+    }).length;
+
+    const cards = [
+      { value: totalClients, label: "Nombre total de clients", emoji: "👥", color: "bg-blue-100 text-blue-600" },
+      { value: avgAudits, label: "Moyenne d’audits / client", emoji: "📝", color: "bg-green-100 text-green-600" },
+      { value: `${avgScoreAll}%`, label: "Moyenne des scores", emoji: "⚡", color: "bg-yellow-100 text-yellow-600" },
+      { value: inactiveCnt, label: "Clients inactifs +6 mois", emoji: "📋", color: "bg-purple-100 text-purple-600" },
+    ];
+
+    wrap.innerHTML = "";
+    cards.forEach((c) => {
+      wrap.insertAdjacentHTML(
+        "beforeend",
+        `<div class="bg-white rounded-xl p-4 flex flex-col gap-2 shadow-sm">
+          <div class="flex justify-between items-center">
+            <span class="text-2xl font-bold text-gray-900">${c.value}</span>
+            <div class="w-8 h-8 rounded-full ${c.color} flex items-center justify-center text-lg">${c.emoji}</div>
+          </div>
+          <p class="text-sm text-gray-500">${c.label}</p>
+        </div>`
+      );
+    });
+  }
+
+  /*******************************
+   * Rendu Liste/table/cartes
+   *******************************/
+  let view = "table";
+  let query = "";
+  let status = "all";
+  let sort = "name";
+  let page = 1;
+  let pageSize = 10;
+
+  const pageSizeSel = $("#pageSize");
+
+  const filtered = () => {
+    let arr = store.clients.filter((c) => c.name.toLowerCase().includes(query));
+    if (status === "active")
+      arr = arr.filter((c) => Date.now() - Math.max(...auditsByClient(c.id).map((a) => a.date), 0) < 180 * 864e5);
+    if (status === "inactive")
+      arr = arr.filter((c) => Date.now() - Math.max(...auditsByClient(c.id).map((a) => a.date), 0) >= 180 * 864e5);
+
+    switch (sort) {
+      case "projects":
+        arr.sort((a, b) => projectsByClient(b.id).length - projectsByClient(a.id).length);
+        break;
+      case "activity":
+        arr.sort(
+          (a, b) =>
+            Math.max(...auditsByClient(b.id).map((x) => x.date), 0) - Math.max(...auditsByClient(a.id).map((x) => x.date), 0)
+        );
+        break;
+      default:
+        arr.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return arr;
+  };
+
+  function render() {
+    renderKPI();
+
+    const data = filtered();
+    const pages = Math.max(1, Math.ceil(data.length / pageSize));
+    page = Math.min(page, pages);
+    const slice = data.slice((page - 1) * pageSize, page * pageSize);
+
+    $("#pager").classList.toggle("hidden", view === "cards");
+    $("#pagerInfo").textContent = `Page ${page}/${pages}`;
+    $("#prev").disabled = page <= 1;
+    $("#next").disabled = page >= pages;
+
+    /* TABLE */
+    const tb = $("#tableBody");
+    tb.innerHTML = "";
+    slice.forEach((c) => {
+      tb.insertAdjacentHTML(
+        "beforeend",
+        `<tr class="border-b hover:bg-gray-50 whitespace-nowrap">
+          <td class="px-4 py-3 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold">${c.name[0]}</span>
+            ${c.name}
+          </td>
+          <td class="px-4 py-3 text-center">${projectsByClient(c.id).length}</td>
+          <td class="px-4 py-3 text-center">${auditsByClient(c.id).length}</td>
+          <td class="px-4 py-3 text-center"><span class="inline-block w-2 h-2 rounded-full mr-1 ${colorScore(avgScore(c.id))}"></span>${avgScore(
+            c.id
+          )}%</td>
+          <td class="px-4 py-3 text-center">${lastAuditDate(c.id)}</td>
+          <td class="px-4 py-3 text-center">
+            <a class="icon" href="rapport_client.html?id=${c.id}">
+              <i data-lucide="eye" class="w-4 h-4 text-gray-400"></i>
+            </a>
+          </td>
+        </tr>`
+      );
+    });
+
+    /* CARDS */
+    const grid = $("#viewCards");
+    grid.innerHTML = "";
+    slice.forEach((c) => {
+      grid.insertAdjacentHTML(
+        "beforeend",
+        `<a href="rapport_client.html?id=${c.id}" class="bg-white p-4 rounded-lg shadow-sm flex gap-4 items-center hover:bg-blue-50 transition">
+          <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">${c.name[0]}</div>
+          <div class="space-y-0.5">
+            <p class="text-sm font-semibold text-gray-700">${c.name}</p>
+            <p class="text-xs text-gray-500">${projectsByClient(c.id).length} projets • ${auditsByClient(c.id).length} audits</p>
+            <p class="text-xs text-gray-400">Score ${avgScore(c.id)} %</p>
+          </div>
+        </a>`
+      );
+    });
+
+    /* toggle views */
+    $("#viewTable").classList.toggle("hidden", view === "cards");
+    grid.classList.toggle("hidden", view === "table");
+    $("#emptyMsg").classList.toggle("hidden", data.length);
+
+    // ← Ajoute cette ligne pour afficher les icônes
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  }
+
+  /*******************************
+   * Events listeners
+   *******************************/
+  $("#btnCards").onclick = () => {
+    view = "cards";
+    render();
+  };
+  $("#btnTable").onclick = () => {
+    view = "table";
+    render();
+  };
+
+  $("#searchDesktop").oninput = (e) => {
+    query = e.target.value.toLowerCase();
+    page = 1;
+    render();
+  };
+  $("#searchMobile").oninput = (e) => {
+    query = e.target.value.toLowerCase();
+    page = 1;
+    render();
+  };
+
+  $("#filtStatus").onchange = (e) => {
+    status = e.target.value;
+    page = 1;
+    render();
+  };
+  $("#sortSel").onchange = (e) => {
+    sort = e.target.value;
+    render();
+  };
+  $("#prev").onclick = () => {
+    if (page > 1) {
+      page--;
+      render();
+    }
+  };
+  $("#next").onclick = () => {
+    page++;
+    render();
+  };
+  pageSizeSel.onchange = (e) => {
+    pageSize = parseInt(e.target.value, 10) || 10;
+    page = 1;
+    render();
+  };
+
+  // Fonction pour ajouter un client
+window.ajouterClient = async function() {
+  const nom = prompt("Nom du client :");
+  const site = prompt("Site web (optionnel) :");
+  
+  if (!nom) return;
+  
+  try {
+    const response = await secureApiCall('/api/clients', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: nom,
+        website: site || null,
+        userId: 1
+      })
+    });
+    
+    const result = await response.json();
+    alert(result.message);
+    
+    if (response.ok) {
+      await loadDataFromAPI();
+      render();
+    }
+  } catch (error) {
+    alert('Erreur de connexion au serveur');
+  }
+}
+
+/*******************************
+ * Initialisation
+ *******************************/
+async function init() {
+  await loadDataFromAPI();
+  populateEspaceDropdown(); // ← Ajouter cette ligne
+  setupEspaceFilter();      // ← Ajouter cette ligne
+  console.log('AUDITS:', apiData.audits);
+  render();
+}
+init();
+
+  // Rendu des icônes Lucide dès que possible
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  } else {
+    document.addEventListener("DOMContentLoaded", () => {
+      window.lucide?.createIcons();
+    });
+  }
+
+/*******************************
+ * Dark Mode Toggle - Version uniforme
+ *******************************/
+const html=document.documentElement,dmToggle=document.getElementById('dm-toggle');
+const DM_KEY='brutux_dm';
+const applyPref=val=>html.classList.toggle('dark-mode',val);
+applyPref(localStorage.getItem(DM_KEY)==='1' || (localStorage.getItem(DM_KEY)===null && window.matchMedia('(prefers-color-scheme:dark)').matches));
+dmToggle.checked=html.classList.contains('dark-mode');
+dmToggle.addEventListener('change',e=>{
+  const on=e.target.checked;
+  applyPref(on);
+  localStorage.setItem(DM_KEY,on?'1':'0');
+});
+
+/*******************************
+ * Fonctionnalités spécifiques
+ *******************************/
+function populateEspaceDropdown() {
+  const espaceSelect = document.getElementById('espaceSelect');
+  
+  if (!espaceSelect) return;
+  
+  // Vider le menu (garder seulement "Tous les clients")
+  espaceSelect.innerHTML = '<option value="">Tous les clients</option>';
+  
+  // Ajouter chaque client
+  apiData.clients.forEach(client => {
+    const option = document.createElement('option');
+    option.value = client.id;
+    option.textContent = client.name;
+    espaceSelect.appendChild(option);
+  });
+}
+
+function setupEspaceFilter() {
+  const espaceSelect = document.getElementById('espaceSelect');
+  
+  if (!espaceSelect) return;
+  
+  espaceSelect.addEventListener('change', function() {
+    const selectedClientId = this.value;
+    
+    if (selectedClientId === '') {
+      // Afficher tous les clients
+      query = "";
+      page = 1;
+      render();
+      updateAuditsRecents(); // ← Ajouter cette ligne
+    } else {
+      // Filtrer pour le client sélectionné
+      const selectedClient = apiData.clients.find(c => c.id == selectedClientId);
+      if (selectedClient) {
+        renderFilteredClients([selectedClient]);
+        updateAuditsRecents(selectedClientId); // ← Ajouter cette ligne
+      }
+    }
+  });
+}
+
+function renderFilteredClients(clientsToShow) {
+  // Masquer la pagination et les KPI quand on filtre sur un client
+  $("#pager").classList.add("hidden");
+  $("#kpiWrap").parentElement.style.display = clientsToShow.length === 1 ? 'none' : 'block';
+  
+  const tb = $("#tableBody");
+  tb.innerHTML = "";
+  
+  clientsToShow.forEach((c) => {
+    tb.insertAdjacentHTML(
+      "beforeend",
+      `<tr class="border-b hover:bg-gray-50 whitespace-nowrap">
+        <td class="px-4 py-3 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold">${c.name[0]}</span>
+          ${c.name}
+        </td>
+        <td class="px-4 py-3 text-center">${projectsByClient(c.id).length}</td>
+        <td class="px-4 py-3 text-center">${auditsByClient(c.id).length}</td>
+        <td class="px-4 py-3 text-center"><span class="inline-block w-2 h-2 rounded-full mr-1 ${colorScore(avgScore(c.id))}"></span>${avgScore(c.id)}%</td>
+        <td class="px-4 py-3 text-center">${lastAuditDate(c.id)}</td>
+        <td class="px-4 py-3 text-center">
+          <a class="icon" href="rapport_client.html?id=${c.id}">
+            <i data-lucide="eye" class="w-4 h-4 text-gray-400"></i>
+          </a>
+        </td>
+      </tr>`
+    );
+  });
+
+  // Gérer les cartes aussi
+  const grid = $("#viewCards");
+  grid.innerHTML = "";
+  clientsToShow.forEach((c) => {
+    grid.insertAdjacentHTML(
+      "beforeend",
+      `<a href="rapport_client.html?id=${c.id}" class="bg-white p-4 rounded-lg shadow-sm flex gap-4 items-center hover:bg-blue-50 transition">
+        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">${c.name[0]}</div>
+        <div class="space-y-0.5">
+          <p class="text-sm font-semibold text-gray-700">${c.name}</p>
+          <p class="text-xs text-gray-500">${projectsByClient(c.id).length} projets • ${auditsByClient(c.id).length} audits</p>
+          <p class="text-xs text-gray-400">Score ${avgScore(c.id)} %</p>
+        </div>
+      </a>`
+    );
+  });
+
+  // ← Ajoute cette ligne à la fin
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
+function updateAuditsRecents(selectedClientId = null) {
+  const auditsRecentsList = document.querySelector('ul.space-y-1');
+  
+  if (!auditsRecentsList) return;
+  
+  let auditsToShow = [];
+  
+  if (selectedClientId) {
+    // Audits du client sélectionné seulement
+    auditsToShow = apiData.audits
+      .filter(audit => audit.clientId == selectedClientId)
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 10);
+  } else {
+    // Tous les audits
+    auditsToShow = apiData.audits
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 10);
+  }
+  
+  // Vider la liste actuelle
+  auditsRecentsList.innerHTML = '';
+  
+  if (auditsToShow.length === 0) {
+    auditsRecentsList.innerHTML = '<li class="text-xs text-gray-400 px-3 py-1.5">Aucun audit</li>';
+    return;
+  }
+  
+  // Remplir avec les vrais audits
+  auditsToShow.forEach((audit) => {
+    const client = apiData.clients.find(c => c.id === audit.clientId);
+    const clientName = client ? client.name : 'Client inconnu';
+    const date = new Date(audit.date).toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: '2-digit' 
+    });
+    
+    auditsRecentsList.insertAdjacentHTML('beforeend', `
+      <li>
+        <a href="rapport_client.html?id=${audit.clientId}" 
+           class="block px-3 py-1.5 rounded hover:bg-gray-100 text-sm">
+          <div class="font-medium">${clientName}</div>
+          <div class="text-xs text-gray-500">Score: ${audit.score}% • ${date}</div>
+        </a>
+      </li>
+    `);
+  });
+}
+  })(); // IIFE end
+
+  function getScoreFromResults(results) {
+  if (!results) return 0;
+  if (Array.isArray(results)) {
+    // Cherche un score global
+    const global = results.find(r => r.axis && r.axis.toLowerCase().includes('global'));
+    if (global && global.score) return Number(global.score);
+    // Sinon, moyenne de tous les scores numériques trouvés
+    const scores = results.map(r => Number(r.score)).filter(n => !isNaN(n));
+    return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  }
+  return 0;
+}
+  </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Clients</title>
+</head>
+<body>
+    <h1>Test Connexion API</h1>
+    
+    <h2>Ajouter un client</h2>
+    <form id="formClient">
+        <input type="text" name="nom" placeholder="Nom du client" required>
+        <input type="url" name="site" placeholder="Site web (optionnel)">
+        <button type="submit">Ajouter Client</button>
+    </form>
+    
+    <h2>Liste des clients</h2>
+    <button onclick="chargerClients()">Charger les clients</button>
+    <div id="listeClients"></div>
+
+    <h2>Ajouter un projet</h2>
+    <form id="formProjet">
+        <select name="clientId" required>
+            <option value="">Choisir un client...</option>
+            <option value="1">Client Test</option>
+            <option value="2">test interface</option>
+        </select>
+        <input type="text" name="nom" placeholder="Nom du projet" required>
+        <input type="url" name="url" placeholder="URL à auditer" required>
+        <button type="submit">Ajouter Projet</button>
+    </form>
+    
+    <h2>Liste des projets</h2>
+    <button onclick="chargerProjets()">Charger les projets du Client 1</button>
+    <div id="listeProjets"></div>
+
+    <h2>Ajouter un audit</h2>
+    <form id="formAudit">
+        <select name="projectId" required>
+            <option value="">Choisir un projet...</option>
+            <option value="1">Site Web Entreprise</option>
+            <option value="2">site E-commerce</option>
+        </select>
+        <input type="text" name="score" placeholder="Score (ex: 85%)" required>
+        <button type="submit">Ajouter Audit</button>
+    </form>
+    
+    <h2>Liste des audits</h2>
+    <button onclick="chargerAudits()">Charger les audits du Projet 1</button>
+    <div id="listeAudits"></div>
+
+    <script>
+    document.getElementById('formClient').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        const response = await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: formData.get('nom'),
+                website: formData.get('site') || null,
+                userId: 1
+            })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        if (response.ok) e.target.reset();
+    });
+    
+    async function chargerClients() {
+        const response = await fetch('/api/clients/1');
+        const result = await response.json();
+        document.getElementById('listeClients').innerHTML = JSON.stringify(result, null, 2);
+    }
+
+    document.getElementById('formProjet').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: formData.get('nom'),
+                url: formData.get('url'),
+                clientId: parseInt(formData.get('clientId'))
+            })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        if (response.ok) e.target.reset();
+    });
+    
+    async function chargerProjets() {
+        const response = await fetch('/api/projects/1');
+        const result = await response.json();
+        document.getElementById('listeProjets').innerHTML = JSON.stringify(result, null, 2);
+    }
+
+    document.getElementById('formAudit').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        const response = await fetch('/api/audits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                projectId: parseInt(formData.get('projectId')),
+                score: formData.get('score'),
+                results: { performance: 85, seo: 90, accessibility: 78 }
+            })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        if (response.ok) e.target.reset();
+    });
+    
+    async function chargerAudits() {
+        const response = await fetch('/api/audits/1');
+        const result = await response.json();
+        document.getElementById('listeAudits').innerHTML = JSON.stringify(result, null, 2);
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Créer un nouveau projet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="w-64 hidden lg:flex flex-col border-r bg-white" id="sidebar" aria-label="Menu principal">
+    <!-- Logo & brand -->
+    <div class="h-16 flex items-center justify-center">
+      <a href="dashboard.html" class="brand-logo">Prometa</a>
+    </div>
+
+    <!-- Contenu vide ou minimal -->
+    <nav class="flex-1 overflow-y-auto px-4 space-y-8">
+      <!-- Espace vide - pas de navigation -->
+    </nav>
+  </aside>
+
+  <!-- Carte centrale -->
+  <main class="flex-1 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-6 mt-0">
+      <h1 class="text-lg font-semibold">Créer un nouveau projet</h1>
+      <form id="formProject" class="space-y-4">
+        <!-- Select client -->
+        <div>
+          <label for="clientSelect" class="text-sm font-medium">Nom du client</label>
+          <select id="clientSelect" class="mt-1 w-full px-3 py-2 bg-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          <button type="button" id="addClientBtn" class="mt-1 text-blue-600 text-sm hover:underline flex items-center gap-1">
+            <span class="text-lg leading-none">+</span> Nouveau client
+          </button>
+        </div>
+        <!-- Input nom projet -->
+        <div>
+          <label for="projectName" class="text-sm font-medium">Nom du projet</label>
+          <input id="projectName" type="text" required placeholder="Prometa" class="mt-1 w-full px-3 py-2 bg-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <!-- Connexion analytics -->
+        <div>
+          <label for="analyticsLink" class="text-sm font-medium">Connexion analytics</label>
+          <input id="analyticsLink" type="url" placeholder="Lien de connexion (ou autre méthode...)" class="mt-1 w-full px-3 py-2 bg-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" class="mt-1 text-blue-600 text-sm hover:underline">+ Rentrer les datas manuellement</button>
+        </div>
+        <!-- Boutons -->
+        <div class="flex justify-end gap-2 pt-4">
+          <a href="dashboard.html" class="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">Annuler</a>
+          <button type="submit" class="px-4 py-2 text-sm rounded-md text-white bg-blue-700 hover:bg-blue-800">Créer le projet</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <label class="dark-mode-toggle" title="Thème sombre">
+    <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+    <span class="slider"></span>
+  </label>
+  <script src="js/auth.js"></script>
+  <script>
+    // Variables globales pour stocker les données API
+    let apiData = {
+      clients: [],
+      projects: [],
+      audits: []
+    };
+
+    const $ = sel => document.querySelector(sel);
+
+    // Charger les clients depuis l'API
+    async function loadClients() {
+      try {
+        const response = await secureApiCall('/api/clients');
+        const result = await response.json();
+        
+        if (response.ok && result.clients) {
+          apiData.clients = result.clients;
+        }
+      } catch (error) {
+        console.error('Erreur chargement clients:', error);
+      }
+    }
+
+    // Populer le select avec les clients
+    function populateClients(selectedId = '') {
+      const select = $('#clientSelect');
+      select.innerHTML = '<option value="">Choisir un client...</option>';
+      
+      apiData.clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        if (c.id == selectedId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // Ajouter un nouveau client
+    $('#addClientBtn').addEventListener('click', async () => {
+      const name = prompt('Nom du nouveau client ?');
+      const website = prompt('Site web (optionnel) :');
+      
+      if (!name) return;
+      
+      try {
+        const response = await secureApiCall('/api/clients', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name,
+            website: website || null,
+            userId: 1
+          })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        
+        if (response.ok) {
+          await loadClients();
+          populateClients(result.client.id);
+        }
+      } catch (error) {
+        alert('Erreur de connexion au serveur');
+      }
+    });
+
+    // Créer un nouveau projet
+    $('#formProject').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const clientId = $('#clientSelect').value;
+      const name = $('#projectName').value.trim();
+      const url = $('#analyticsLink').value.trim();
+      
+      if (!clientId || !name) {
+        return alert('Veuillez remplir les champs requis.');
+      }
+      
+      try {
+        const response = await secureApiCall('/api/projects', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name,
+            url: url || 'https://example.com',
+            clientId: parseInt(clientId)
+          })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        
+        if (response.ok) {
+          // Passer l'ID du projet créé à la page win
+          window.location.href = `win.html?projectId=${result.project.id}`;
+        }
+      } catch (error) {
+        alert('Erreur de connexion au serveur');
+      }
+    });
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Charger les données depuis l'API
+      await loadClients();
+      
+      // Populer le menu déroulant des clients
+      populateClients();
+      
+      // Reste du code d'initialisation existant...
+    });
+  </script>
+  <script>
+    // Initialiser les icônes Lucide
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  </script>
+  <style>
+    :root {
+  --c-bg: #f3f4f6;
+  --c-surface: #fff;
+  --c-border: #e5e7eb;
+}
+.dark-mode {
+  --c-bg: #1b1f24;
+  --c-surface: #101418;
+  --c-border: #23272f;
+}
+body {
+  background: var(--c-bg);
+}
+aside {
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-border);
+}
+.bg-white {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text, #111827) !important;
+}
+.dark-mode .bg-white {
+  color: #f6f7f9 !important;
+}
+select {
+  background-color: #fff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+.dark-mode select {
+  background-color: #23272f;
+  color: #f6f7f9;
+  border-color: #2b3138;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 15px;
+  color: #4b5563;
+  transition: background 0.18s, color 0.18s;
+  line-height: 1.35;
+}
+.navItem:hover {
+  background: #e8edfa;
+  color: #2563eb;
+}
+.navActive {
+  background: #e8edfa;
+  color: #2563eb;
+}
+.dark-mode .navItem {
+  color: #a2a8b3;
+}
+.dark-mode .navItem:hover {
+  background: #23272f;
+  color: #60a5fa;
+}
+.dark-mode .navActive {
+  background: #23272f;
+  color: #60a5fa;
+}
+.navItem svg {
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  margin-right: 0.5rem;
+}
+.dark-mode input[type="text"],
+.dark-mode input[type="url"] {
+  background-color: #23272f !important;
+  color: #f6f7f9 !important;
+  border-color: #2b3138 !important;
+}
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+.brand-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none; /* ← Enlever le soulignement */
+  transition: color 0.2s; /* ← Animation douce */
+}
+
+.brand-logo:hover {
+  color: #1d4ed8; /* ← Couleur plus foncée au survol */
+}
+  </style>
+  <script>
+    const html = document.documentElement;
+    const DM_KEY = 'brutux_dm';
+    const applyPref = val => html.classList.toggle('dark-mode', val);
+    applyPref(
+      localStorage.getItem(DM_KEY) === '1' ||
+      (localStorage.getItem(DM_KEY) === null && window.matchMedia('(prefers-color-scheme:dark)').matches)
+    );
+
+    // Gestion du toggle dark mode
+    const toggle = $('#dm-toggle');
+    toggle.addEventListener('change', () => {
+      const isChecked = toggle.checked;
+      applyPref(isChecked);
+      localStorage.setItem(DM_KEY, isChecked ? '1' : '0');
+    });
+  </script>
+</body>
+</html>

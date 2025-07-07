@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<!--
+  Dashboard – BrutX Audit (version commentée et légèrement améliorée)
+  ————————————————————————————————————————————————
+  • Ajout de commentaires détaillés (FR) pour chaque grande section.
+  • Petites corrections d’accessibilité et de JS (fermeture des menus, aria‑attributes…).
+  • Normalisation des helpers Tailwind.
+  • Suppression du CDN Heroicons Vue (inutile ici) ➜ icônes en SVG inline.
+-->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard – BrutX Audit</title>
+
+  <!-- Tailwind CDN mode. ⚠️ Pour la prod, préférez un build pour purger les classes non utilisées. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+
+<body>
+  <div class="flex min-h-screen bg-gray-100">
+    <aside class="w-64 hidden lg:flex flex-col border-r bg-white" id="sidebar" aria-label="Menu principal">
+      <!-- Logo & brand -->
+      
+  <div class="h-16 flex items-center justify-center">
+  <span class="brand-logo">Prometa</span>
+</div>
+
+  <!-- Navigation principale -->
+<nav class="flex-1 overflow-y-auto px-4 space-y-8">
+  <!-- ▼ Pages principales -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Navigation</p>
+    <div class="space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-md bg-blue-50 text-blue-700 font-medium">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        Dashboard
+      </a>
+      <a href="clients.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="users" class="w-5 h-5"></i>
+        Clients
+      </a>
+      <a href="nouveau-projet.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+        Nouveau Projet
+      </a>
+      <a href="audit.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="search" class="w-5 h-5"></i>
+        Audit
+      </a>
+      <a href="win.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-blue-50 hover:text-blue-700 font-medium">
+        <i data-lucide="file-text" class="w-5 h-5"></i>
+        Rapport
+      </a>
+    </div>
+  </div>
+
+  <!-- ▼ Sélecteur d'espace -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Espace</p>
+    <select id="espaceSelect" class="w-full px-3 py-2 rounded-md bg-gray-50 border text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <option value="">Tous les clients</option>
+    </select>
+  </div>
+
+  <!-- ▼ Audits récents -->
+  <div class="space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Audits récents</p>
+    <ul id="auditList" class="space-y-1 text-sm">
+      <!-- Rempli dynamiquement par le JS -->
+    </ul>
+  </div>
+
+  <!-- ▼ Archives, Réglages, Déconnexion -->
+  <div class="space-y-1 pt-6 border-t">
+    <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="archive" class="w-4 h-4"></i> Archives
+    </a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="settings" class="w-4 h-4"></i> Réglages
+    </a>
+    <a href="#" onclick="logout()" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm">
+      <i data-lucide="log-out" class="w-4 h-4"></i> Déconnexion
+    </a>
+  </div>
+</nav>
+
+</aside>
+
+<!-- Backdrop mobile (clique ➜ ferme le menu) -->
+<div id="backdrop" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" aria-hidden="true"></div>
+
+<!-- =================== ⬅️ WRAPPER PRINCIPAL -->
+<div class="flex-1 flex flex-col overflow-hidden min-h-0">
+  <!-- ===== HEADER / BARRE SUPÉRIEURE ===== -->
+  <header class="h-16 flex items-center justify-between bg-white border-b px-4 lg:px-8">
+    <!-- Burger (affiché uniquement < lg) -->
+    <button id="burgerBtn" class="lg:hidden p-2 rounded-md hover:bg-gray-100 focus:outline-none"
+            aria-label="Ouvrir le menu">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <!-- Barre de recherche (masquée xs) -->
+    <input type="text" placeholder="Rechercher"
+           class="hidden sm:block flex-1 max-w-sm mx-4 px-3 py-2 text-sm bg-gray-100 rounded-md
+                  focus:ring-2 focus:ring-blue-500"
+           aria-label="Rechercher" />
+
+   <!-- ========= ZONE DROITE améliorée ========= -->
+      <div class="flex items-center gap-4">
+        <!-- Langue -->
+        <div class="relative">
+          <button id="langBtn" class="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md px-2 py-1" aria-haspopup="menu" aria-expanded="false">
+            <span>Français</span>
+            <svg class="w-4 h-4 transition-transform chevron" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul id="langMenu" class="hidden absolute right-0 mt-1 w-28 bg-white border rounded-md shadow-lg text-sm">
+            <li><a href="#" class="block px-3 py-2 hover:bg-gray-50">Français</a></li>
+            <li><a href="#" class="block px-3 py-2 hover:bg-gray-50">English</a></li>
+          </ul>
+        </div>
+
+        <!-- Notifications -->
+        <div class="relative">
+          <button id="notifBtn" class="relative p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Notifications" aria-haspopup="menu" aria-expanded="false">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17h5l-1.4-1.4A2 2 0 0118 14V11a6 6 0 10-12 0v3a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1"/></svg>
+            <span id="notifBadge" class="absolute -top-1 -right-1 px-1.5 rounded-full text-[10px] font-semibold bg-red-600 text-white">3</span>
+          </button>
+          <div id="notifMenu" class="hidden absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg">
+            <div class="px-4 py-2 text-sm font-semibold text-gray-700 border-b">Notifications</div>
+            <ul id="notifList" class="max-h-60 overflow-y-auto divide-y text-sm">
+              <li class="flex items-start gap-2 px-4 py-3 hover:bg-gray-50"><span>✅</span>Audit #42 terminé</li>
+              <li class="flex items-start gap-2 px-4 py-3 hover:bg-gray-50"><span>📝</span>Nouvelle tâche assignée</li>
+              <li class="flex items-start gap-2 px-4 py-3 hover:bg-gray-50"><span>📊</span>Rapport mensuel prêt</li>
+            </ul>
+            <a href="#" class="block text-center text-xs text-blue-600 py-2 hover:bg-gray-50">Tout voir</a>
+          </div>
+        </div>
+
+        <!-- Profil -->
+        <div class="relative">
+          <button id="profileBtn" class="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full" aria-haspopup="menu" aria-expanded="false">
+            <img src="https://i.pravatar.cc/32?img=5" alt="Avatar utilisateur" class="w-8 h-8 rounded-full">
+            <svg class="w-4 h-4 text-gray-500 transition-transform chevron hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="profileMenu" class="hidden absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg text-sm">
+            <a href="#" class="block px-4 py-2 hover:bg-gray-50">Profil</a>
+            <a href="#" class="block px-4 py-2 hover:bg-gray-50">Réglages</a>
+            <button id="logoutBtn2" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-50" onclick="logout()">Déconnexion</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+
+  <!-- ===== CONTENU PRINCIPAL ===== -->
+  <main id="mainArea" class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" tabindex="-1"><!-- injecté par JS --></main>
+</div>
+
+<!-- ----------------- 📝 TEMPLATES (réutilisés via JS) ----------------- -->
+<template id="tplPageHeader">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-bold">Dashboard</h1>
+      <!-- Sous-label dynamique -->
+      <span id="subLabel" class="inline-block mt-1 px-3 py-0.5 text-xs rounded-lg bg-purple-600/20 text-purple-600 font-medium">
+        Onboarding
+      </span>
+    </div>
+    <a href="nouveau-projet.html" class="btnPrimary">+ Nouveau client</a>
+  </div>
+</template>
+
+<template id="tplOnboarding">
+  <section class="border-4 border-purple-600/70 rounded-lg p-10 flex flex-col items-center
+                  justify-center text-center gap-6 bg-white">
+    <!-- Icône utilisateur -->
+    <svg class="w-24 h-24 text-blue-500" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a4 4 0 110 8 4 4 0 010-8zm0 10c-3.333 0-10 1.667-10 5v3h20v-3c0-3.333-6.667-5-10-5z"/></svg>
+    <div>
+      <h2 class="font-semibold text-lg">Hey&nbsp;!</h2>
+      <p class="text-sm text-gray-600">
+        Commencez par créer votre premier client pour lancer vos projets.
+      </p>
+    </div>
+    <button id="newClientBtn" class="btnPrimary" onclick="window.location.href='nouveau-projet.html'">+ Nouveau client</button>
+  </section>
+</template>
+
+<template id="tplDashboard">
+  <!-- Cartes de statistiques -->
+  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8" id="statsCards"></section>
+
+  <!-- Prochaines actions (tableau) -->
+  <section class="bg-white border rounded-lg shadow-sm p-4">
+    <h3 class="font-semibold mb-4">Prochaines actions</h3>
+
+    <!-- Filtres -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <select id="filtProject" class="select"> <option value="">Tous les projets</option></select>
+      <select id="filtTask" class="select">    <option value="">Toutes les tâches</option></select>
+      <select id="filtImpact" class="select">
+        <option value="">Tous les impacts</option>
+        <option>Faible</option><option>Moyen</option><option>Élevé</option>
+      </select>
+    </div>
+
+    <!-- Tableau des tâches -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm whitespace-nowrap" id="tasksTable">
+        <thead>
+          <tr class="text-left text-gray-500 border-b">
+            <th class="py-2 pr-8">Nom de projet</th>
+            <th class="py-2 pr-8">Type de tâche</th>
+            <th class="py-2 pr-8">Tâche à effectuer</th>
+            <th class="py-2 pr-8">Impact</th>
+            <th class="py-2 pr-8">Deadline</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</template>
+
+<!-- ----------------- 🎨 UTILITAIRES TAILWIND (via @apply) -----------------
+     ⚠️ @apply ne fonctionne qu'en build-time. En CDN, on remplace par une simple
+        classe utilitaire unique (ici e.g. "btnPrimary" définie ci-dessous).
+---------------------------------------------------------------------------- -->
+<style>
+  .select     { @apply bg-gray-100 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500; }
+  .btnPrimary { 
+  background-color: #2563eb !important; 
+  color: white !important; 
+  padding: 0.5rem 1rem !important; 
+  border-radius: 0.375rem !important; 
+  font-size: 0.875rem !important; 
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  transition: background-color 0.2s !important;
+}
+
+.btnPrimary:hover { 
+  background-color: #1d4ed8 !important; 
+}
+
+.dark-mode .btnPrimary {
+  background-color: var(--c-primary) !important;
+}
+
+.dark-mode .btnPrimary:hover {
+  background-color: #1e40af !important;
+}
+
+  .navItem    { @apply flex items-center gap-2 py-2 px-2 rounded-md text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50; }
+  .navActive  { @apply bg-blue-50 text-blue-600; }
+  .dropdownMenu { @apply absolute bg-white border rounded-lg shadow-lg py-1 w-40 hidden z-40; }
+  .dropdownItem { @apply w-full text-left px-4 py-2 text-sm hover:bg-gray-100 block; }
+
+  /* ===================== LIGHT THEME (défaut) ================= */
+:root {
+  /* Surface & texte */
+  --c-bg: #ffffff;            /* gris clair pour le fond */
+  --c-surface: #ffffff;       /* blanc pour les surfaces */
+  --c-border: #e5e7eb;        /* gris clair pour les bordures */
+  --c-text: #111827;          /* noir pour le texte */
+  --c-text-soft: #6b7280;     /* gris pour le texte secondaire */
+
+  /* Variantes spécifiques */
+  --c-primary: #2358ff;       /* bleu principal */
+  --c-primary-10: #edf2ff;    /* bleu très clair pour les fonds */
+  --c-gauge-track: #f3f4f6;   /* gris clair pour les backgrounds */
+  
+  /* Variables manquantes */
+  --sidebar-w: 16rem;
+  --gap-l: 2rem;
+  --gap-m: 1rem;
+  --shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
+  --fs-1: 1rem;
+  --radius: 0.5rem;
+}
+
+
+/* ===================== DARK THEME ========================= */
+@media(prefers-color-scheme:dark){
+ :root{color-scheme:dark; /* pour input native */}
+}
+.dark-mode{
+ /* Surface & texte */
+ --c-bg:#101418;           --c-surface:#1b1f24;
+ --c-border:#2b3138;
+ --c-text:#f6f7f9;         --c-text-soft:#a2a8b3;
+
+ /* Variantes spécifiques */
+ --c-primary-10:#203066;
+ --c-gauge-track:#2b3138;
+ --c-primary:#2358ff;
+ 
+ /* Variables manquantes */
+ --sidebar-w:16rem;
+ --gap-l:2rem;
+ --gap-m:1rem;
+ --shadow:0 1px 3px 0 rgba(0,0,0,0.1);
+ --fs-1:1rem;
+ --radius:0.5rem;
+}
+
+/* Fond de page en mode sombre */
+/* Fond de page en mode sombre - Force la priorité */
+/* ---------- Reset / base ---------- */
+*,*:before,*:after{box-sizing:border-box}
+html{font-size:100%}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;font-size:var(--fs-1);
+ background:var(--c-bg);color:var(--c-text);line-height:1.52;-webkit-font-smoothing:antialiased}
+
+
+/* Styles TailwindCSS en Dark Mode */
+.dark-mode .bg-white {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .bg-gray-50,
+.dark-mode .bg-gray-100 {
+  background-color: var(--c-gauge-track) !important;
+}
+
+.dark-mode .border-b,
+.dark-mode .border-r,
+.dark-mode .border {
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-800,
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-900 {
+  color: var(--c-text-soft) !important;
+}
+
+.dark-mode input,
+.dark-mode select {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+  border-color: var(--c-border) !important;
+}
+
+.dark-mode .hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .bg-blue-50 {
+  background-color: var(--c-primary-10) !important;
+}
+
+.dark-mode .text-blue-700 {
+  color: var(--c-primary) !important;
+}
+
+.dark-mode aside {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+}
+
+/* Style Logo exactement comme audit.html */
+.brand-logo {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--c-primary) !important;
+  line-height: 1.2 !important;
+}
+
+/* Mode sombre */
+.dark-mode .brand-logo {
+  color: var(--c-primary);
+}
+
+/* Styles de survol TailwindCSS complets */
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb !important;
+  color: inherit !important;
+}
+
+.hover\:bg-gray-100:hover {
+  background-color: #f3f4f6 !important;
+  color: inherit !important;
+}
+
+.hover\:bg-blue-50:hover {
+  background-color: var(--c-primary-10) !important;
+  color: var(--c-primary) !important;
+}
+
+.hover\:text-blue-700:hover {
+  color: var(--c-primary) !important;
+}
+
+/* Mode sombre - survols */
+.dark-mode .hover\:bg-gray-50:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+
+.dark-mode .hover\:bg-gray-100:hover {
+  background-color: var(--c-border) !important;
+  color: var(--c-text) !important;
+}
+
+/* Styles pour les selects en mode clair et sombre */
+select, .select {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.dark-mode select,
+.dark-mode .select {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text) !important;
+  border-color: var(--c-border) !important;
+}
+
+/* Dark Mode Toggle fixe - Version mini */
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.dark-mode-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.dark-mode-toggle input:checked + .slider {
+  background: var(--c-primary);
+}
+
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+</style>
+
+<!-- securité -->
+<script src="js/auth.js"></script>
+
+<!-- =================== 🌐 JS PRINCIPAL =================== -->
+<script>
+/* ==========================================================================
+   1. Local Storage mock (clients & tasks)
+   ========================================================================= */
+const store = {
+  clients: JSON.parse(localStorage.getItem('clients') || '[]'),
+  tasks:   JSON.parse(localStorage.getItem('tasks')   || '[]'),
+  save() {
+    localStorage.setItem('clients', JSON.stringify(this.clients));
+    localStorage.setItem('tasks',   JSON.stringify(this.tasks));
+  }
+};
+
+/* ==========================================================================
+   2. Helpers DOM
+   ========================================================================= */
+const $  = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const mainArea = $('#mainArea');
+
+/* ==========================================================================
+   3. Ouverture / fermeture Sidebar (mobile)
+   ========================================================================= */
+const burger    = $('#burgerBtn');
+const sidebar   = $('#sidebar');
+const backdrop  = $('#backdrop');
+
+function toggleSidebar(open = !sidebar.classList.contains('-translate-x-full')) {
+  sidebar.classList.toggle('-translate-x-full', !open);
+  backdrop.classList.toggle('hidden', !open);
+  document.body.classList.toggle('overflow-hidden', open); // lock scroll when open
+}
+
+burger.addEventListener('click', () => toggleSidebar(true));
+backdrop.addEventListener('click', () => toggleSidebar(false));
+
+/* ==========================================================================
+   4. Dropdowns (profil, notifications) – accessibilité ARIA minimale
+   ========================================================================= */
+function toggleDrop(btn, menu) {
+  const isHidden = menu.classList.toggle('hidden'); // true ➜ maintenant masqué
+  btn.setAttribute('aria-expanded', String(!isHidden));
+
+  // Clique en dehors pour fermer
+  if (!isHidden) {
+    // On stocke la réf pour pouvoir removeEventListener proprement
+    const outsideHandler = e => {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', outsideHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', outsideHandler)); // timeout ➜ laisse dérouler l’event initial
+  }
+}
+
+$('#profileBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  toggleDrop(e.currentTarget, $('#profileMenu'));
+});
+
+$('#notifBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  toggleDrop(e.currentTarget, $('#notifMenu'));
+});
+
+/* ==========================================================================
+   5. Header de page (template injecté dynamiquement)
+   ========================================================================= */
+function renderPageHeader(isOnboarding) {
+  const node = document.importNode($('#tplPageHeader').content, true);
+  if (!isOnboarding) node.querySelector('#subLabel').remove();
+  mainArea.appendChild(node);
+}
+
+/* ==========================================================================
+   6. ONBOARDING (aucun client) : invitation à créer un client
+   ========================================================================= */
+function renderOnboarding() {
+  mainArea.innerHTML = '';
+  renderPageHeader(true);
+
+  const node = document.importNode($('#tplOnboarding').content, true);
+  mainArea.appendChild(node);
+
+  $('#newClientBtn').addEventListener('click', () => {
+    const name = prompt('Nom du client ?');
+    if (name) {
+      store.clients.push({ id: Date.now(), name });
+      store.save();
+      renderApp(); // relance l’app
+    }
+  });
+}
+
+/* ==========================================================================
+   7. DASHBOARD PRINCIPAL
+   ========================================================================= */
+async function renderDashboard() {
+  mainArea.innerHTML = '';
+  renderPageHeader(false);
+
+  const node = document.importNode($('#tplDashboard').content, true);
+  mainArea.appendChild(node);
+
+  // -- 7.1 Stats -----------------------------------------------------------
+  const stats = await getStats();
+  const statsMap = [
+    { label:'Audits réalisés',  value: stats.audits, icon:'📄', delta: stats.audits > 0 ? `+${Math.round(stats.audits * 0.2)} ce mois` : 'Aucun audit'},
+    { label:'Pages optimisées', value: stats.pages,  icon:'🛠️', delta: stats.pages > 0 ? `${stats.pages} projets` : 'Aucun projet'},
+    { label:'Recommandations',  value: stats.recos,  icon:'💡', delta: stats.recos > 0 ? `${Math.round(stats.recos * 0.56)} traitées` : 'Aucune reco'},
+    { label:'Mon score UX',     value: stats.score,  icon:'📈', delta: stats.score !== '0%' ? 'Score moyen' : 'Pas de score'}
+  ];
+  const wrap = $('#statsCards');
+  statsMap.forEach(c => {
+    wrap.insertAdjacentHTML('beforeend', `
+      <div class="bg-white border rounded-lg p-4 flex items-center gap-4 shadow-sm">
+        <div class="text-3xl">${c.icon}</div>
+        <div>
+          <p class="text-xl font-semibold">${c.value}</p>
+          <p class="text-sm text-gray-500">${c.label}</p>
+          <p class="text-xs text-green-600">${c.delta}</p>
+        </div>
+      </div>
+    `);
+  });
+
+  // -- 7.2 Filtres + table --------------------------------------------------
+  populateFilters();
+  renderTable();
+  $$('#filtProject, #filtTask, #filtImpact').forEach(sel => sel.addEventListener('change', renderTable));
+}
+
+/* ==========================================================================
+   8. STATS depuis API – remplace les données mock
+   ========================================================================= */
+async function getStats() {
+  try {
+    // Récupérer TOUS les clients avec projets et audits
+    const response = await secureApiCall('/api/clients');  // ← Changé de /api/clients/1 à /api/clients
+    const result = await response.json();
+    
+    if (response.ok && result.clients) {
+      let totalAudits = 0;
+      let totalProjects = 0;
+      let scores = [];
+      
+      result.clients.forEach(client => {
+        if (client.projects) {
+          totalProjects += client.projects.length;
+          client.projects.forEach(project => {
+            if (project.audits) {
+              totalAudits += project.audits.length;
+              project.audits.forEach(audit => {
+                if (audit.score) {
+                  // Utiliser le score calculé depuis audit_pipeline.js
+                  scores.push(parseInt(audit.score));
+                }
+              });
+            }
+          });
+        }
+      });
+      
+      const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      const totalRecos = totalAudits * 15; // Estimation : 15 recommandations par audit
+      const recosTraitees = Math.round((totalRecos * 0.56)); // 56% traitées
+      
+      return {
+        audits: totalAudits,
+        pages: totalProjects, 
+        recos: totalRecos,
+        score: avgScore + '%'
+      };
+    }
+  } catch (error) {
+    console.error('Erreur chargement stats:', error);
+  }
+  
+  // Valeurs par défaut si erreur
+  return { audits: 0, pages: 0, recos: 0, score: '0%' };
+}
+
+/* ==========================================================================
+   9. TABLE : helpers filtres + rendering rows
+   ========================================================================= */
+function populateFilters() {
+  const projectSel = $('#filtProject');
+  const taskSel    = $('#filtTask');
+  projectSel.innerHTML = '<option value="">Tous les projets</option>';
+  taskSel.innerHTML    = '<option value="">Toutes les tâches</option>';
+
+  // Projets uniques ➜ select
+  store.clients.forEach(c => projectSel.insertAdjacentHTML('beforeend', `<option>${c.name}</option>`));
+  // Types de tâche uniques ➜ select
+  [...new Set(store.tasks.map(t => t.type))]
+    .forEach(t => taskSel.insertAdjacentHTML('beforeend', `<option>${t}</option>`));
+}
+
+function renderTable() {
+  const proj = $('#filtProject').value;
+  const type = $('#filtTask').value;
+  const imp  = $('#filtImpact').value;
+  const tbody = $('#tasksTable tbody');
+  tbody.innerHTML = '';
+
+  // Filtrage basique
+  const rows = store.tasks.filter(t =>
+    (!proj || t.project === proj) && (!type || t.type === type) && (!imp || t.impact === imp)
+  );
+
+  if (!rows.length) {
+    return tbody.insertAdjacentHTML('beforeend', '<tr><td colspan="5" class="py-4 text-center text-gray-500">Aucune tâche</td></tr>');
+  }
+
+  rows.forEach(r => tbody.insertAdjacentHTML('beforeend', `
+    <tr class="border-b hover:bg-gray-50">
+      <td class="py-2 pr-8">${r.project}</td>
+      <td class="py-2 pr-8">${r.type}</td>
+      <td class="py-2 pr-8">${r.label}</td>
+      <td class="py-2 pr-8">
+        <span class="px-2 py-0.5 rounded text-white text-xs ${r.impact==='Faible'?'bg-green-500':r.impact==='Moyen'?'bg-yellow-500':'bg-red-500'}">
+          ${r.impact}
+        </span>
+      </td>
+      <td class="py-2 pr-8">${r.deadline}</td>
+    </tr>`));
+}
+
+/* ==========================================================================
+   10. Point d’entrée : décide si Onboarding ou Dashboard
+   ========================================================================= */
+async function renderApp() {
+  // Charger les données API
+  await loadDataFromAPI();
+  
+  // Remplir le menu déroulant
+  populateEspaceDropdown();
+  
+  // Configurer le filtre
+  setupEspaceFilter();
+  
+  // Liste des audits récents dans la sidebar
+  const list = $('#auditList');
+  list.innerHTML = '';
+  
+  // Utiliser les vraies données
+  const audits = apiData.audits
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 10);
+    
+  audits.forEach(audit => {
+    const client = apiData.clients.find(c => c.id === audit.clientId);
+    const project = apiData.projects.find(p => p.id === audit.projectId);
+    list.insertAdjacentHTML('beforeend', 
+      `<li><a href="rapport_client.html?id=${audit.clientId}" class="block py-1.5 truncate hover:text-blue-600">${project?.name || 'Projet'} - ${client?.name || 'Client'}</a></li>`
+    );
+  });
+
+  // Si aucun client ➜ onboarding, sinon dashboard
+  apiData.clients.length ? renderDashboard() : renderOnboarding();
+}
+
+// Kickstart
+renderApp();
+
+// Variables globales pour les données API
+let apiData = {
+  clients: [],
+  projects: [],
+  audits: []
+};
+
+// Fonction pour charger les données depuis l'API
+async function loadDataFromAPI() {
+  try {
+    const response = await secureApiCall('/api/clients');
+    const result = await response.json();
+    
+    if (response.ok && result.clients) {
+      apiData.clients = result.clients;
+      apiData.projects = result.clients.flatMap(c => c.projects || []);
+      apiData.audits = result.clients.flatMap(c => 
+        (c.projects || []).flatMap(p => (p.audits || []).map(a => ({
+          ...a,
+          clientId: c.id,
+          projectId: p.id
+        })))
+      );
+    }
+  } catch (error) {
+    console.error('Erreur chargement API:', error);
+  }
+}
+
+function populateEspaceDropdown() {
+  const espaceSelect = document.getElementById('espaceSelect');
+  
+  if (!espaceSelect) return;
+  
+  // Vider le menu (garder seulement "Tous les clients")
+  espaceSelect.innerHTML = '<option value="">Tous les clients</option>';
+  
+  // Ajouter chaque client
+  apiData.clients.forEach(client => {
+    const option = document.createElement('option');
+    option.value = client.id;
+    option.textContent = client.name;
+    espaceSelect.appendChild(option);
+  });
+}
+
+function setupEspaceFilter() {
+  const espaceSelect = document.getElementById('espaceSelect');
+  
+  if (!espaceSelect) return;
+  
+  espaceSelect.addEventListener('change', function() {
+    const selectedClientId = this.value;
+    
+    if (selectedClientId === '') {
+      // Afficher toutes les stats globales
+      renderApp();
+    } else {
+      // Filtrer les stats pour le client sélectionné
+      renderDashboardForClient(selectedClientId);
+    }
+  });
+}
+
+async function renderDashboardForClient(clientId) {
+  const selectedClient = apiData.clients.find(c => c.id == clientId);
+  if (!selectedClient) return;
+  
+  mainArea.innerHTML = '';
+  renderPageHeader(false);
+  
+  // Modifier le titre pour afficher le nom du client
+  const h1 = document.querySelector('h1');
+  if (h1) h1.textContent = `Dashboard - ${selectedClient.name}`;
+
+  const node = document.importNode($('#tplDashboard').content, true);
+  mainArea.appendChild(node);
+
+  // Stats filtrées pour ce client
+  const stats = await getStatsForClient(clientId);
+  const statsMap = [
+    { label:'Audits réalisés',  value: stats.audits, icon:'📄', delta: stats.audits > 0 ? `${stats.audits} pour ce client` : 'Aucun audit'},
+    { label:'Pages optimisées', value: stats.pages,  icon:'🛠️', delta: stats.pages > 0 ? `${stats.pages} projets` : 'Aucun projet'},
+    { label:'Recommandations',  value: stats.recos,  icon:'💡', delta: stats.recos > 0 ? `${Math.round(stats.recos * 0.56)} traitées` : 'Aucune reco'},
+    { label:'Mon score UX',     value: stats.score,  icon:'📈', delta: stats.score !== '0%' ? 'Score moyen' : 'Pas de score'}
+  ];
+  
+  const wrap = $('#statsCards');
+  statsMap.forEach(c => {
+    wrap.insertAdjacentHTML('beforeend', `
+      <div class="bg-white border rounded-lg p-4 flex items-center gap-4 shadow-sm">
+        <div class="text-3xl">${c.icon}</div>
+        <div>
+          <p class="text-xl font-semibold">${c.value}</p>
+          <p class="text-sm text-gray-500">${c.label}</p>
+          <p class="text-xs text-green-600">${c.delta}</p>
+        </div>
+      </div>
+    `);
+  });
+
+  // Table vide pour ce client (ou adapter selon tes besoins)
+  populateFilters();
+  renderTable();
+}
+
+async function getStatsForClient(clientId) {
+  const client = apiData.clients.find(c => c.id == clientId);
+  if (!client || !client.projects) {
+    return { audits: 0, pages: 0, recos: 0, score: '0%' };
+  }
+  
+  let totalAudits = 0;
+  let scores = [];
+  
+  client.projects.forEach(project => {
+    if (project.audits) {
+      totalAudits += project.audits.length;
+      project.audits.forEach(audit => {
+        if (audit.score) {
+          scores.push(parseInt(audit.score));
+        }
+      });
+    }
+  });
+  
+  const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  const totalRecos = totalAudits * 15;
+  
+  return {
+    audits: totalAudits,
+    pages: client.projects.length,
+    recos: totalRecos,
+    score: avgScore + '%'
+  };
+}
+</script>
+
+<!-- Initialiser Lucide -->
+<script>
+  lucide.createIcons();
+</script>
+
+<!-- Dark-mode switch en position fixe -->
+<label class="dark-mode-toggle">
+  <input type="checkbox" id="dm-toggle">
+  <span class="slider"></span>
+</label>
+
+<script>
+const html = document.documentElement, dmToggle = document.getElementById('dm-toggle');
+const DM_KEY = 'brutux_dm';
+const applyPref = val => html.classList.toggle('dark-mode', val);
+applyPref(
+  localStorage.getItem(DM_KEY) === '1' ||
+  (localStorage.getItem(DM_KEY) === null && window.matchMedia('(prefers-color-scheme:dark)').matches)
+);
+dmToggle.checked = html.classList.contains('dark-mode');
+dmToggle.addEventListener('change', e => {
+  const on = e.target.checked;
+  applyPref(on);
+  localStorage.setItem(DM_KEY, on ? '1' : '0');
+});
+</script>
+</body>
+</html>

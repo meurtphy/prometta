@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Page de connexion BrutX Audit" />
+  <title>Connexion - BrutX Audit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+:root {
+  --c-bg: #fff;
+  --c-surface: #fff;
+}
+.dark-mode {
+  --c-bg: #1b1f24;
+  --c-surface: #101418;
+}
+body {
+  background: var(--c-bg);
+}
+/* Carte centrale (formulaire) */
+.bg-white {
+  background-color: var(--c-surface) !important;
+  color: var(--c-text, #1b1f24) !important;
+}
+.dark-mode .bg-white {
+  color: #f6f7f9 !important;
+}
+.dark-mode input[type="email"],
+.dark-mode input[type="password"],
+.dark-mode input[type="text"],
+.dark-mode input[type="url"] {
+  background-color: #23272f !important;
+  color: #f6f7f9 !important;
+  border-color: #2b3138 !important;
+}
+.dark-mode input[type="checkbox"] {
+  accent-color: #23272f;
+}
+/* Bouton dark mode */
+.dark-mode-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.dark-mode-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--c-border);
+  border-radius: 20px;
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.dark-mode-toggle .slider:before {
+  content: "🌙";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+.dark-mode-toggle input:checked + .slider:before {
+  transform: translateX(16px);
+  content: "☀️";
+}
+.dark-mode-toggle .peer:checked + span > span {
+  transform: translateX(1.25rem);
+  background: #101418;
+}
+.dark-mode-toggle .dot {
+  transition: transform 0.3s, background 0.3s;
+}
+.sun-icon {
+  opacity: 1;
+}
+.moon-icon {
+  opacity: 0;
+}
+.dark-mode .sun-icon {
+  opacity: 0;
+}
+.dark-mode .moon-icon {
+  opacity: 1;
+}
+.dark-mode-toggle span {
+  position: relative;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  width: 2.5rem;
+  height: 1.25rem;
+  transition: background 0.3s;
+}
+.dark-mode .dark-mode-toggle span {
+  background: #374151;
+}
+
+.dark-mode-toggle input:checked + span .dot {
+  transform: translateX(1.25rem);
+  background: #1e293b;
+}
+
+
+.dark-mode-toggle input:checked + span .icon-sun {
+  opacity: 0;
+}
+.dark-mode-toggle input:checked + span .icon-moon {
+  opacity: 1;
+}
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <!-- Bouton dark mode identique aux autres pages -->
+  <label class="dark-mode-toggle" title="Thème sombre">
+    <input type="checkbox" id="dm-toggle" aria-label="Dark mode">
+    <span class="slider"></span>
+  </label>
+
+  <main
+    class="bg-white w-full max-w-md mx-auto rounded-2xl shadow-lg p-6 sm:p-8
+           flex flex-col"
+  >
+    <h1 class="text-2xl font-bold text-center mb-2">Connectez-vous</h1>
+    <p class="text-center text-gray-600 text-sm mb-6">
+      Entrez votre e-mail et votre mot de passe pour continuer
+    </p>
+
+    <!-- Zone d'affichage des erreurs -->
+    <div
+      id="errorMessage"
+      role="alert"
+      class="hidden mb-4 text-red-600 bg-red-100 px-4 py-2 rounded"
+    ></div>
+
+    <form id="loginForm" novalidate class="flex flex-col space-y-4">
+      <!-- Email -->
+      <div class="flex flex-col">
+        <label for="email" class="text-sm mb-1">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          aria-required="true"
+          placeholder="email@exemple.com"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Mot de passe + lien forgot -->
+      <div class="flex flex-col">
+        <div class="flex justify-between items-center mb-1">
+          <label for="password" class="text-sm">Mot de passe</label>
+          <a
+            href="#"
+            class="text-blue-600 text-xs hover:underline"
+            tabindex="0"
+          >Mot de passe oublié ?</a>
+        </div>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          aria-required="true"
+          placeholder="••••••••"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Remember me -->
+      <div class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="remember"
+          name="remember"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+        <label for="remember" class="text-sm">Se souvenir de moi</label>
+      </div>
+
+      <!-- Bouton submit -->
+      <button
+        type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold
+               py-2 rounded-md transition-all"
+      >
+        Me connecter
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-gray-600 mt-6">
+      Pas encore de compte ?
+      <a
+        href="signup.html"
+        class="text-blue-600 hover:underline"
+      >Créer un compte</a>
+    </p>
+  </main>
+
+  <!-- Script de connexion -->
+  <script>
+    (function(){
+      const BASE_URL = 'http://localhost:3000/api'; // ← à modifier en prod
+      const form = document.getElementById('loginForm');
+      const errorBox = document.getElementById('errorMessage');
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        errorBox.classList.add('hidden');
+        const payload = {
+          email: form.email.value.trim(),
+          password: form.password.value,
+          remember: form.remember.checked
+        };
+
+        try {
+          const res = await fetch(`${BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          console.log('🔍 Réponse serveur:', data);
+
+          if (!res.ok) {
+            throw new Error(data.message || 'Erreur de connexion');
+          }
+
+          // Exemple de stockage de token + redirection
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            console.log('✅ Token sauvé:', data.token);
+            console.log('✅ User sauvé:', data.user);
+          }
+          console.log('🚀 Redirection vers:', data.redirect_url || 'dashboard.html');
+          window.location.href = data.redirect_url || 'dashboard.html';
+        } catch (err) {
+          errorBox.textContent = err.message;
+          errorBox.classList.remove('hidden');
+        }
+      });
+    })();
+
+    // Dark mode synchro
+    const html = document.documentElement;
+    const dmToggle = document.getElementById('dm-toggle');
+    const DM_KEY = 'brutux_dm';
+    const applyPref = val => html.classList.toggle('dark-mode', val);
+    applyPref(
+      localStorage.getItem(DM_KEY) === '1' ||
+      (localStorage.getItem(DM_KEY) === null && window.matchMedia('(prefers-color-scheme:dark)').matches)
+    );
+    if (dmToggle) {
+      dmToggle.checked = html.classList.contains('dark-mode');
+      dmToggle.addEventListener('change', e => {
+        const on = e.target.checked;
+        applyPref(on);
+        localStorage.setItem(DM_KEY, on ? '1' : '0');
+      });
+    }
+  </script>
+</body>
+</html>

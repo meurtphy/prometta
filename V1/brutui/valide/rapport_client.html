@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport Client · Prometa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="max-w-4xl mx-auto p-6">
+    <!-- Header -->
+    <div class="mb-6">
+      <a href="clients.html" class="text-blue-600 hover:underline">← Retour aux clients</a>
+      <h1 id="clientName" class="text-3xl font-bold mt-2">Rapport Client</h1>
+    </div>
+
+    <!-- Informations client -->
+    <div id="clientInfo" class="bg-white rounded-lg p-6 mb-6 shadow-sm">
+      <h2 class="text-xl font-semibold mb-4">Informations</h2>
+      <div id="clientDetails"></div>
+    </div>
+
+    <!-- Audits -->
+    <div id="auditsSection" class="space-y-6"></div>
+  </div>
+
+  <script>
+    // Récupérer les paramètres depuis l'URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const clientId = params.get('id');
+    const auditId = params.get('auditId');
+
+    async function loadReport() {
+      console.log('Paramètres URL:', { token, clientId, auditId });
+      
+      // Cas 1 : Accès client avec token
+      if (token) {
+        console.log('🔑 Accès client avec token');
+        await loadReportByToken();
+      }
+      // Cas 2 : Accès admin avec clientId/auditId
+      else if (clientId && auditId) {
+        console.log('👨‍💼 Accès admin avec clientId/auditId');
+        await loadReportByIds();
+      }
+      // Cas 3 : Paramètres manquants
+      else {
+        document.body.innerHTML = '<p class="text-center text-red-500 mt-10">Paramètres manquants dans l\'URL</p>';
+      }
+    }
+
+    // Fonction pour l'accès client (avec token)
+    async function loadReportByToken() {
+      try {
+        console.log('Appel API vers:', `/api/report/${token}`);
+        const response = await fetch(`/api/report/${token}`);
+        
+        if (!response.ok) {
+          throw new Error('Rapport non trouvé ou lien expiré');
+        }
+
+        const result = await response.json();
+        const audit = result.audit;
+        
+        displayReport(audit, true); // true = accès client
+        
+      } catch (error) {
+        console.error('Erreur accès client:', error);
+        document.body.innerHTML = `<p class="text-center text-red-500 mt-10">Erreur : ${error.message}</p>`;
+      }
+    }
+
+    // Fonction pour l'accès admin (avec clientId/auditId)
+    async function loadReportByIds() {
+      try {
+        console.log('Appel API vers:', `/api/audits/${clientId}`);
+        const response = await fetch(`/api/audits/${clientId}`);
+        
+        if (!response.ok) {
+          throw new Error('Données non trouvées');
+        }
+
+        const result = await response.json();
+        const audit = result.audits.find(a => a.id == auditId);
+        
+        if (!audit) {
+          throw new Error('Audit non trouvé');
+        }
+        
+        displayReport(audit, false); // false = accès admin
+        
+      } catch (error) {
+        console.error('Erreur accès admin:', error);
+        document.body.innerHTML = `<p class="text-center text-red-500 mt-10">Erreur : ${error.message}</p>`;
+      }
+    }
+
+    // Fonction unifiée pour afficher le rapport
+    function displayReport(audit, isClientAccess = false) {
+      // Afficher les infos du client
+      document.getElementById('clientName').textContent = `Rapport - ${audit.project.client.name}`;
+      document.getElementById('clientDetails').innerHTML = `
+        <p><strong>Client :</strong> ${audit.project.client.name}</p>
+        <p><strong>Projet :</strong> ${audit.project.name}</p>
+        <p><strong>URL auditée :</strong> ${audit.url}</p>
+        <p><strong>Date :</strong> ${new Date(audit.createdAt).toLocaleDateString('fr-FR')}</p>
+        ${isClientAccess ? '<p class="text-green-600 font-medium">📋 Accès client sécurisé</p>' : ''}
+      `;
+
+      // Afficher le rapport d'audit
+      const section = document.getElementById('auditsSection');
+      const auditHtml = generateAuditReport(audit, audit.project.name);
+      section.innerHTML = auditHtml;
+    }
+
+    function generateAuditReport(audit, projectName) {
+      const date = new Date(audit.createdAt).toLocaleDateString('fr-FR');
+      const results = audit.results || [];
+      
+      // LOGS DE DIAGNOSTIC - COMPARAISON DES 2 AUDITS
+      console.log('=== AUDIT', audit.id, '===');
+      console.log('Audit complet:', audit);
+      console.log('audit.results:', audit.results);
+      console.log('Type de audit.results:', typeof audit.results);
+      console.log('audit.score:', audit.score);
+      console.log('audit.results.performance:', audit.results?.performance);
+      console.log('audit.results.seo:', audit.results?.seo);
+      console.log('audit.results.accessibility:', audit.results?.accessibility);
+      console.log('Clés de audit.results:', Object.keys(audit.results || {}));
+      console.log('========================');
+      
+      // Calculer le score global
+      let globalScore = 'N/A';
+
+      // Si le score existe ET est > 0, l'utiliser
+      if (audit.score !== undefined && audit.score !== null && parseInt(audit.score) > 0) {
+        globalScore = parseInt(audit.score);
+        console.log('Score direct pour audit', audit.id, ':', globalScore);
+      } 
+      // Si score = 0 ou pas de score, CALCULER depuis les résultats
+      else if (Array.isArray(audit.results) && audit.results.length > 0) {
+        console.log('Score = 0, calcul forcé depuis les résultats pour audit', audit.id);
+        
+        // Extraire les scores depuis les analyses
+        let totalScore = 0;
+        let scoreCount = 0;
+        
+        audit.results.forEach(result => {
+          // Chercher dans result.response s'il y a une note/score
+          if (result.response && typeof result.response === 'string') {
+            // Chercher des patterns comme "Score: 80" ou "Note: 75/100"
+            const scoreMatch = result.response.match(/(?:Score|Note).*?(\d+)(?:\/100)?/i);
+            if (scoreMatch) {
+              const score = parseInt(scoreMatch[1]);
+              if (!isNaN(score) && score >= 0 && score <= 100) {
+                totalScore += score;
+                scoreCount++;
+                console.log(`Score trouvé dans ${result.axis}: ${score}`);
+              }
+            }
+          }
+        });
+        
+        if (scoreCount > 0) {
+          globalScore = Math.round(totalScore / scoreCount);
+          console.log(`Score calculé pour audit ${audit.id}: ${globalScore} (moyenne de ${scoreCount} scores)`);
+        } else {
+          // Fallback: calculer basé sur la longueur et qualité des réponses
+          globalScore = Math.min(Math.round(audit.results.length * 8), 100);
+          console.log(`Score par défaut pour audit ${audit.id}: ${globalScore}`);
+        }
+      } 
+      // Fallback si vraiment rien n'est trouvé
+      else {
+        globalScore = 0;
+        console.log('Aucun score trouvé pour audit', audit.id);
+      }
+      
+      let reportHtml = `
+        <div class="bg-white rounded-lg p-6 shadow-sm">
+          <div class="border-b pb-4 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Rapport d'Audit UX/UI</h2>
+            <p class="text-gray-600 mt-2">
+              <strong>Projet :</strong> ${projectName || 'Non spécifié'}<br>
+              <strong>URL :</strong> ${audit.url || 'Non spécifiée'}<br>
+              <strong>Date :</strong> ${date}<br>
+              <strong>Score global :</strong> ${globalScore}/100
+            </p>
+          </div>
+      `;
+
+      // Ajouter les scores détaillés si disponibles
+      if (audit.results && audit.results.performance) {
+        reportHtml += `
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-blue-600 mb-3">Scores détaillés</h3>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="text-center p-3 bg-gray-50 rounded">
+                <div class="text-2xl font-bold text-blue-600">${audit.results.performance}%</div>
+                <div class="text-sm text-gray-600">Performance</div>
+              </div>
+              <div class="text-center p-3 bg-gray-50 rounded">
+                <div class="text-2xl font-bold text-green-600">${audit.results.seo}%</div>
+                <div class="text-sm text-gray-600">SEO</div>
+              </div>
+              <div class="text-center p-3 bg-gray-50 rounded">
+                <div class="text-2xl font-bold text-purple-600">${audit.results.accessibility}%</div>
+                <div class="text-sm text-gray-600">Accessibilité</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Générer le contenu pour chaque axe d'analyse
+      if (Array.isArray(results)) {
+        results.forEach(item => {
+          if (item.response) {
+            reportHtml += formatAnalysisSection(item);
+          }
+        });
+      }
+
+      reportHtml += '</div>';
+      return reportHtml;
+    }
+
+    function formatAnalysisSection(item) {
+      const axis = item.axis || 'Analyse';
+      const response = item.response || '';
+      
+      // Nettoyer et formater la réponse
+      let formattedText = response
+        .replace(/###\s*/g, '<h3 class="text-lg font-semibold mt-4 mb-2">')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '</p><p class="mb-3">')
+        .replace(/\n/g, '<br>');
+
+      return `
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-blue-600 mb-3">${axis}</h3>
+          <div class="text-gray-700 leading-relaxed">
+            <p class="mb-3">${formattedText}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function displaySpecificAudit(projects, auditId) {
+      const section = document.getElementById('auditsSection');
+      
+      if (!projects || projects.length === 0) {
+        section.innerHTML = '<p class="text-gray-500">Aucun audit disponible.</p>';
+        return;
+      }
+
+      // Trouver l'audit spécifique
+      let foundAudit = null;
+      let projectName = '';
+      
+      for (const project of projects) {
+        if (project.audits && project.audits.length > 0) {
+          for (const audit of project.audits) {
+            if (audit.id == auditId) {
+              foundAudit = audit;
+              projectName = project.name;
+              break;
+            }
+          }
+          if (foundAudit) break;
+        }
+      }
+
+      if (foundAudit) {
+        // Afficher seulement cet audit
+        const auditHtml = generateAuditReport(foundAudit, projectName);
+        section.innerHTML = auditHtml;
+        
+        // Modifier le titre pour indiquer qu'il s'agit d'un audit spécifique
+        document.getElementById('clientName').textContent = `Rapport d'Audit - ${foundAudit.clientName || 'Client'}`;
+      } else {
+        section.innerHTML = '<p class="text-gray-500">Audit spécifique non trouvé.</p>';
+      }
+    }
+
+    // Charger les données au démarrage
+    loadReport();
+  </script>
+</body>
+</html>
