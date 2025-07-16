@@ -555,7 +555,8 @@ async function loadDataFromAPI() {
                   id: audit.id,
                   clientId: project.clientId,
                   score: getScoreFromResults(audit.results) || parseInt(audit.score) || 0,
-                  date: new Date(audit.createdAt).getTime()
+                  date: new Date(audit.createdAt).getTime(),
+                  accessToken: audit.accessToken
                 });
               });
             }
@@ -693,7 +694,7 @@ const store = apiData;
           )}%</td>
           <td class="px-4 py-3 text-center">${lastAuditDate(c.id)}</td>
           <td class="px-4 py-3 text-center">
-            <a class="icon" href="rapport_client.html?id=${c.id}">
+            <a class="icon" href="rapport_client.html?token=${getLastAuditToken(c.id)}">
               <i data-lucide="eye" class="w-4 h-4 text-gray-400"></i>
             </a>
           </td>
@@ -986,9 +987,7 @@ function updateAuditsRecents(selectedClientId = null) {
     `);
   });
 }
-  })(); // IIFE end
-
-  function getScoreFromResults(results) {
+function getScoreFromResults(results) {
   if (!results) return 0;
   if (Array.isArray(results)) {
     // Cherche un score global
@@ -1000,6 +999,16 @@ function updateAuditsRecents(selectedClientId = null) {
   }
   return 0;
 }
-  </script>
+
+const getLastAuditToken = (clientId) => {
+    const clientAudits = auditsByClient(clientId);
+    if (clientAudits.length === 0) return '#';
+    
+    const lastAudit = clientAudits.sort((a, b) => b.date - a.date)[0];
+    return lastAudit.accessToken || '#';
+  };
+
+})(); // IIFE end
+</script>
 </body>
 </html>

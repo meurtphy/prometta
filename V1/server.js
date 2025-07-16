@@ -502,10 +502,8 @@ app.get('/api/users/:userId/clients', authenticateToken, async (req, res) => {
                 url: true,
                 score: true,
                 createdAt: true,
-                projectId: true,
-                accessToken: true,
+                accessToken: true,  // ← IMPORTANT : Inclure le token !
                 screenshotPath: true
-                // ← Exclure 'results' pour éviter l'affichage des images base64
               }
             }
           }
@@ -822,20 +820,32 @@ app.post('/api/launch-audit', authenticateToken, async (req, res) => {
   }
 });
 
-// Nouvelle route pour récupérer tous les clients
+// ✅ Remplacer cette route
 app.get('/api/clients', authenticateToken, async (req, res) => {
   try {
     const clients = await prisma.client.findMany({
+      where: { userId: req.user.userId }, // ← Seulement les clients de l'utilisateur
       include: {
         projects: {
           include: {
-            audits: true
+            audits: {
+              orderBy: { createdAt: 'desc' },
+              select: {
+                id: true,
+                url: true,
+                score: true,
+                createdAt: true,
+                accessToken: true,  // ← IMPORTANT : Inclure le token !
+                screenshotPath: true
+              }
+            }
           }
         }
       }
     });
     res.json({ clients });
   } catch (err) {
+    console.error('❌ Erreur récupération clients:', err);
     res.status(500).json({ message: 'Erreur lors de la récupération des clients' });
   }
 });

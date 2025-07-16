@@ -1,2 +1,48 @@
 # .gitignore
 .env
+/generated/prisma
+
+# Variables d'environnement supplémentaires
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Base de données
+dev.db
+dev.db-journal
+*.db
+*.db-journal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Uploads et fichiers temporaires
+uploads/
+temp/
+.temp/
+.cache/
+
+# Modules Node.js
+node_modules/
+
+# Fichiers de build
+dist/
+build/
+
+# Fichiers IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Screenshots d'audit (si sensibles)
+screenshots/

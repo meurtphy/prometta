@@ -5,12 +5,15 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
 
 const exec = promisify(execFile);
 const PORT = 4000;
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.dirname(__filename);
+const prisma = new PrismaClient();
 
+console.log('run_audit.js lancé avec :', process.argv);
 // ─── App Express ─────────────────────────────────────────────
 const app = express();
 app.use(express.json());
@@ -64,6 +67,26 @@ app.post('/run-audit', async (req, res) => {
       if (stdout) console.log(color.gray(stdout.trim()));
       console.log(color.green(`✅ ${name} terminé en ${duration}s\n`));
     }
+
+    console.log('Insertion en DB pour projectId:', projectId, 'url:', url);
+    // === AJOUT : insertion en DB ===
+    const projectId = req.body.projectId; // récupère l'ID du projet envoyé par le front
+    const auditResults = JSON.parse(await fs.readFile(path.join(ROOT, 'audit_results.json'), 'utf-8'));
+    const screenshot = await fs.readFile(path.join(ROOT, 'screenshot.png'), 'base64');
+
+    if (!projectId) throw new Error('projectId manquant pour l’insertion en DB');
+
+    await prisma.audit.create({
+      data: {
+        project: { connect: { id: Number(projectId) } },
+        siteUrl: req.body.url,
+        screenshot,
+        report: auditResults
+      }
+    });
+
+    await prisma.$disconnect();
+    console.log(color.green('✅ Audit inséré en DB !'));
 
     res.json({ ok: true, results: 'audit_results.json' });
   } catch (err) {
